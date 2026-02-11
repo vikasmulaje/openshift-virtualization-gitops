@@ -1,0 +1,20 @@
+apiVersion: metal3.io/v1alpha1
+kind: BareMetalHost
+metadata:
+  annotations:
+    bmac.agent-install.openshift.io/hostname: spoke1-master-0.spoke1.${PLATFORM_BASE_DOMAIN}
+    bmac.agent-install.openshift.io/role: master
+    bmac.agent-install.openshift.io/cluster-reference: spoke1/spoke1
+    bmac.agent-install.openshift.io/remove-agent-and-node-on-delete: "true"
+  labels:
+    infraenvs.agent-install.openshift.io: spoke1
+    cluster-name: spoke1
+  name: spoke1-master-0
+spec:
+  automatedCleaningMode: metadata
+  bmc:
+    address: "ipmi://192.168.123.220"
+    credentialsName: bmc-credentials
+    disableCertificateVerification: true
+  bootMACAddress: 52:54:00:aa:01:00
+  online: true
