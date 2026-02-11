@@ -1,0 +1,32 @@
+apiVersion: agent-install.openshift.io/v1beta1
+kind: NMStateConfig
+metadata:
+  name: spoke1-master-2
+  namespace: spoke1
+  labels:
+    infraenvs.agent-install.openshift.io: spoke1
+spec:
+  config:
+    interfaces:
+    - name: eth0
+      type: ethernet
+      state: up
+      ipv4:
+        enabled: true
+        address:
+          - ip: 192.168.123.212
+            prefix-length: 24
+        dhcp: false
+      dns-resolver:
+        config:
+          server:
+          - 8.8.8.8
+          - 8.8.4.4
+      routes:
+        config:
+        - destination: 0.0.0.0/0
+          next-hop-address: 192.168.123.1
+          next-hop-interface: eth0
+  interfaces:
+    - name: eth0
+      macAddress: 52:54:00:aa:01:02

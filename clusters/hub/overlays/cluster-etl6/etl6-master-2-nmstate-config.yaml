@@ -1,0 +1,22 @@
+apiVersion: agent-install.openshift.io/v1beta1
+kind: NMStateConfig
+metadata:
+  name: etl6-master-2
+  namespace: etl6
+  labels:
+    infraenvs.agent-install.openshift.io: etl6
+spec:
+  config:
+    interfaces:
+    - name: eth0
+      type: ethernet
+      state: up
+      ipv4:
+        enabled: true
+        address:
+          - ip: 192.168.123.225
+            prefix-length: 24
+        dhcp: false
+  interfaces:
+    - name: eth0
+      macAddress: 52:54:00:aa:06:02
