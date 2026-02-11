@@ -6,6 +6,7 @@ applications:
 # Basics
 
   openshift-config:
+    enabled: false
     annotations:
       argocd.argoproj.io/sync-wave: '5'
     destination:
@@ -123,7 +124,7 @@ applications:
 
   etl4:
     annotations:
-      argocd.argoproj.io/sync-wave: '25'
+      argocd.argoproj.io/sync-wave: '5'
     destination:
       namespace: etl4
     source:
@@ -131,7 +132,7 @@ applications:
 
   etl6:
     annotations:
-      argocd.argoproj.io/sync-wave: '25'
+      argocd.argoproj.io/sync-wave: '5'
     destination:
       namespace: etl6
     source:
@@ -139,7 +140,7 @@ applications:
 
   spoke1:
     annotations:
-      argocd.argoproj.io/sync-wave: '25'
+      argocd.argoproj.io/sync-wave: '5'
     destination:
       namespace: spoke1
     source:
