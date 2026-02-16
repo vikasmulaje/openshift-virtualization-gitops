@@ -16,5 +16,5 @@ spec:
     address: "redfish://192.168.123.1:8000/redfish/v1/Systems/c5efc509-3b7f-4253-bc5e-c32332332a89"
     credentialsName: bmc-credentials
     disableCertificateVerification: true
-  bootMACAddress: 52:54:00:aa:04:00
+  bootMACAddress: 52:54:00:d6:00:79
   online: true
