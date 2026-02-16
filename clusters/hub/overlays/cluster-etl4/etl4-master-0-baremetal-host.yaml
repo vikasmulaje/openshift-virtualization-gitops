@@ -12,7 +12,7 @@ metadata:
     cluster-name: etl4
   name: etl4-master-0
 spec:
-  automatedCleaningMode: metadata
+  automatedCleaningMode: disabled
   bmc:
     address: "redfish://192.168.123.1:8000/redfish/v1/Systems/c5efc509-3b7f-4253-bc5e-c32332332a89"
     credentialsName: bmc-credentials
