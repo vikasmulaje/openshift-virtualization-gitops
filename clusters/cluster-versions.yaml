@@ -7,3 +7,4 @@ data:
   hub: main
   etl4: main
   etl6: main
+  spoke1: main
