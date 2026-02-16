@@ -17,6 +17,15 @@ spec:
           - ip: 192.168.123.222
             prefix-length: 24
         dhcp: false
+    dns-resolver:
+      config:
+        server:
+        - 192.168.123.1
+    routes:
+      config:
+      - destination: 0.0.0.0/0
+        next-hop-address: 192.168.123.1
+        next-hop-interface: eth0
   interfaces:
     - name: eth0
       macAddress: 52:54:00:aa:04:02
