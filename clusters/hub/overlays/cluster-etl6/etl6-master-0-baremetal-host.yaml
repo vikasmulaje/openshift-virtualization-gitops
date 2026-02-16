@@ -13,7 +13,7 @@ metadata:
 spec:
   automatedCleaningMode: metadata
   bmc:
-    address: "ipmi://192.168.123.240"
+    address: "redfish://192.168.123.1:8000/redfish/v1/Systems/faacf3fe-a590-4215-9f33-82a33cfd18c3"
     credentialsName: bmc-credentials
     disableCertificateVerification: true
   bootMACAddress: 52:54:00:aa:06:00
