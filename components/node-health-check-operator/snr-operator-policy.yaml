@@ -23,6 +23,4 @@ spec:
     namespace: openshift-workload-availability
     source: redhat-operators
     sourceNamespace: openshift-marketplace
-    startingCSV: self-node-remediation.v0.10.0
-  versions:
-  - self-node-remediation.v0.10.0
+  versions: 

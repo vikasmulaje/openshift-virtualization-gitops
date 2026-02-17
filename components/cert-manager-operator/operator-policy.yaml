@@ -28,4 +28,4 @@ spec:
     namespace: cert-manager
     source: redhat-operators
     sourceNamespace: openshift-marketplace
-  versions: []
+  versions: 
