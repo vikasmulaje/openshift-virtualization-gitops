@@ -23,4 +23,5 @@ spec:
     namespace: devworkspace-operator
     source: redhat-operators
     sourceNamespace: openshift-marketplace
-  versions: []
+  versions:
+    - devworkspace-operator.v0.33.0

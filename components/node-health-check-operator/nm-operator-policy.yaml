@@ -23,4 +23,5 @@ spec:
     namespace: openshift-workload-availability
     source: redhat-operators
     sourceNamespace: openshift-marketplace
-  versions: []
+  versions:
+    - node-maintenance-operator.v5.4.0
