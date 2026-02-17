@@ -28,4 +28,4 @@ spec:
     namespace: external-dns-operator
     source: redhat-operators
     sourceNamespace: openshift-marketplace
-  versions: 
+  versions: []
