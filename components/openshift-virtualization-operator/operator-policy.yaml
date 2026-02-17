@@ -28,4 +28,4 @@ spec:
     namespace: openshift-cnv
     source: redhat-operators
     sourceNamespace: openshift-marketplace
-  versions: 
+  versions: []
