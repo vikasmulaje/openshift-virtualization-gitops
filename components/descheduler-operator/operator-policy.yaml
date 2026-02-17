@@ -28,4 +28,5 @@ spec:
     namespace: openshift-kube-descheduler-operator
     source: redhat-operators
     sourceNamespace: openshift-marketplace
-  versions: []
+  versions:
+    - clusterkubedescheduleroperator.v5.3.1

@@ -23,4 +23,5 @@ spec:
     namespace: web-terminal-operator
     source: redhat-operators
     sourceNamespace: openshift-marketplace
-  versions: []
+  versions:
+    - web-terminal.v1.15.0
