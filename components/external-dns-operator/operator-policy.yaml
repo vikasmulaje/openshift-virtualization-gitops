@@ -28,6 +28,4 @@ spec:
     namespace: external-dns-operator
     source: redhat-operators
     sourceNamespace: openshift-marketplace
-    startingCSV: external-dns-operator.v1.3.0
   versions: 
-    - external-dns-operator.v1.3.0

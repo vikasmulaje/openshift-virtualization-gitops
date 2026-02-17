@@ -26,5 +26,5 @@ spec:
     namespace: metallb-system
     source: redhat-operators
     sourceNamespace: openshift-marketplace
-  versions: []
+  versions: 
 
