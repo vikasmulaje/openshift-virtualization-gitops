@@ -25,3 +25,4 @@ spec:
     sourceNamespace: openshift-marketplace
   versions:
     - devworkspace-operator.v0.33.0
+    - devworkspace-operator.v0.39.0
