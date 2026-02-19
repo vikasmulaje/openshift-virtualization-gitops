@@ -29,4 +29,5 @@ spec:
     source: redhat-operators
     sourceNamespace: openshift-marketplace
   versions:
+    - external-dns-operator.v1.3.0
     - external-dns-operator.v1.3.3
