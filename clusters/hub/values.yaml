@@ -26,7 +26,7 @@ applications:
 
   metallb-configuration:
     annotations:
-      argocd.argoproj.io/sync-wave: '6'
+      argocd.argoproj.io/sync-wave: '25'
     destination:
       namespace: metallb-system
     source:
@@ -34,7 +34,7 @@ applications:
 
   nmstate-configuration:
     annotations:
-      argocd.argoproj.io/sync-wave: '6'
+      argocd.argoproj.io/sync-wave: '25'
     destination:
       namespace: metallb-system
     source:
