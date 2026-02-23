@@ -2,7 +2,7 @@ apiVersion: metal3.io/v1alpha1
 kind: BareMetalHost
 metadata:
   annotations:
-    bmac.agent-install.openshift.io/hostname: etl6-master-2.etl6.ocp.rht-labs.com
+    bmac.agent-install.openshift.io/hostname: etl6-master-2.etl6.qe.lab.redhat.com
     bmac.agent-install.openshift.io/role: master
     bmac.agent-install.openshift.io/cluster-reference: etl6/etl6
     bmac.agent-install.openshift.io/remove-agent-and-node-on-delete: "true"
@@ -11,11 +11,12 @@ metadata:
     infraenvs.agent-install.openshift.io: etl6
     cluster-name: etl6
   name: etl6-master-2
+  namespace: etl6
 spec:
   automatedCleaningMode: disabled
   bmc:
-    address: "redfish://192.168.123.1:8000/redfish/v1/Systems/124e228d-2179-470b-afc9-d1d7a2048c59"
+    address: "redfish-virtualmedia://192.168.135.1:8000/redfish/v1/Systems/271e0e77-b2ec-45ae-9fe4-f37ba6cbbd40"
     credentialsName: bmc-credentials
     disableCertificateVerification: true
-  bootMACAddress: 52:54:00:89:a0:e3
+  bootMACAddress: "52:54:00:aa:06:02"
   online: true
