@@ -5,7 +5,10 @@ resources:
   - ./namespace.yaml       
   - ./etl4-master-0-nmstate-config.yaml
   - ./etl4-master-1-nmstate-config.yaml
-  - ./etl4-master-2-nmstate-config.yaml   
+  - ./etl4-master-2-nmstate-config.yaml
+  - ./etl4-master-0-baremetal-host.yaml
+  - ./etl4-master-1-baremetal-host.yaml
+  - ./etl4-master-2-baremetal-host.yaml
 
 helmGlobals:
   chartHome: ../../../../.helm-charts
