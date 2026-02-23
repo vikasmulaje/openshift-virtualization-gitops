@@ -124,7 +124,7 @@ applications:
 
   etl4:
     annotations:
-      argocd.argoproj.io/sync-wave: '5'
+      argocd.argoproj.io/sync-wave: '20'
     destination:
       namespace: etl4
     source:
@@ -132,7 +132,7 @@ applications:
 
   etl6:
     annotations:
-      argocd.argoproj.io/sync-wave: '5'
+      argocd.argoproj.io/sync-wave: '20'
     destination:
       namespace: etl6
     source:
@@ -140,7 +140,7 @@ applications:
 
   spoke1:
     annotations:
-      argocd.argoproj.io/sync-wave: '5'
+      argocd.argoproj.io/sync-wave: '20'
     destination:
       namespace: spoke1
     source:
