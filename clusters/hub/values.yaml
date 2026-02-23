@@ -85,14 +85,14 @@ applications:
   aap-operator:
     annotations:
       argocd.argoproj.io/compare-options: IgnoreExtraneous
-      argocd.argoproj.io/sync-wave: '5'
+      argocd.argoproj.io/sync-wave: '20'
     source:      
       path: components/aap-operator
 
   aap-configuration:
     annotations:
       argocd.argoproj.io/compare-options: IgnoreExtraneous
-      argocd.argoproj.io/sync-wave: '15'
+      argocd.argoproj.io/sync-wave: '25'
     destination:
       namespace: aap
     source:
@@ -102,13 +102,13 @@ applications:
 
   mtv-operator:
     annotations:
-      argocd.argoproj.io/sync-wave: '5'
+      argocd.argoproj.io/sync-wave: '20'
     source:
       path: components/mtv-operator
 
   mtv-configuration:
     annotations:
-      argocd.argoproj.io/sync-wave: '15'
+      argocd.argoproj.io/sync-wave: '25'
     destination:
       namespace: openshift-mtv
     source:
