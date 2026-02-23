@@ -73,7 +73,7 @@ applications:
 
   gitops-boostrap-policy:
     annotations:
-      argocd.argoproj.io/sync-wave: '15'
+      argocd.argoproj.io/sync-wave: '20'
     namespace: acm-policies  
     source:
       path: components/gitops-boostrap-policy
