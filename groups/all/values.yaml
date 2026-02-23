@@ -22,7 +22,7 @@ applications:
 
   web-terminal-operator:
     annotations:
-      argocd.argoproj.io/sync-wave: '20'
+      argocd.argoproj.io/sync-wave: '30'
     source:
       path: components/web-terminal-operator 
 
@@ -33,7 +33,7 @@ applications:
 
   kube-ops-view:
     annotations:
-      argocd.argoproj.io/sync-wave: '20'
+      argocd.argoproj.io/sync-wave: '30'
     destination:
       namespace: kube-ops-view
     source:
