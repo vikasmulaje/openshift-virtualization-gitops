@@ -24,4 +24,5 @@ spec:
     source: redhat-operators
     sourceNamespace: openshift-marketplace
   versions:
-    - self-node-remediation.v0.10.0
+  - self-node-remediation.v0.10.0
+  - self-node-remediation.v0.11.0
