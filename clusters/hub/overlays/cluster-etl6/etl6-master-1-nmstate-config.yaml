@@ -8,24 +8,24 @@ metadata:
 spec:
   config:
     interfaces:
-    - name: eth0
+    - name: enp1s0
       type: ethernet
       state: up
       ipv4:
         enabled: true
         address:
-          - ip: 192.168.123.224
+          - ip: 192.168.135.171
             prefix-length: 24
         dhcp: false
     dns-resolver:
       config:
         server:
-        - 192.168.123.1
+        - 192.168.135.1
     routes:
       config:
       - destination: 0.0.0.0/0
-        next-hop-address: 192.168.123.1
-        next-hop-interface: eth0
+        next-hop-address: 192.168.135.1
+        next-hop-interface: enp1s0
   interfaces:
-    - name: eth0
+    - name: enp1s0
       macAddress: 52:54:00:aa:06:01
