@@ -23,10 +23,10 @@ spec:
     targetNamespaces:
         - openshift-mtv
   subscription:
-    channel: release-v2.10
+    channel: release-v2.11
     name: mtv-operator
     namespace: openshift-mtv
     source: redhat-operators
     sourceNamespace: openshift-marketplace
   versions:
-    - mtv-operator.v2.10.5
+    - mtv-operator.v2.11.0
