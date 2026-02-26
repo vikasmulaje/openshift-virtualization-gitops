@@ -53,6 +53,7 @@ SUSHY_IMAGE="quay.io/ocp-edge-qe/sushy-tools:latest"
 HUB_KUBECONFIG="/home/kni/clusterconfigs/auth/kubeconfig"
 GITOPS_REPO="https://github.com/vikasmulaje/openshift-virtualization-gitops.git"
 # GITOPS_REPO_SSH="git@github.com:vikasmulaje/openshift-virtualization-gitops.git"
+GITOPS_BRANCH="${GITOPS_BRANCH:-openshift-4.21}"
 GITOPS_DIR="/home/kni/openshift-virtualization-gitops"
 PULL_SECRET_FILE="/home/kni/pull-secret.json"
 SSH_KEY="ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCuvmmrAPF/axpjIrcJ6pdZ7Ale6XBOCUNanM0fTNOoY7emN/39PwZ7c4LQPvWI0MifjE0UgzuLSPwNGEeH/j8PM2Vy/Bp/h2r09rZ3ti8oaBgcV+UBafOd/85H6O/NMMSiGAubM9JUw0+z5q9yuESTZAPwGcp2gsgC1Ray5YZSIUcH7sSeZk0o6IOsZ8f08L4eiGwkTRZpZ20PRXKxATibxLz7cdzfm01G0ShizchaagOrbLaPXVN9s33L+kM+R4QfoWvhsUIroa3xzUp91n0QbNGj/hBO0OlXiPpitFQFx7F0AZi/ZuJiaYbTpiGlM0SwWPg1IT0a+E44q9gsRHKFuf5Ehpzm/sNb5+eAo0bSGivcwELEh1kzuWOsxPNMGS07I/r+vZ0PNu4fXB7oVH2Ox9hCIfNEsmH8BOK3fLsxp1Eg6QyTf1rKkFnw2iq4ZG/fyxwgPvdLbP24TRH5+fbqSp7EC9tZGKY2E8rRCufB82nbqR5bCChchRL8dmNipkc= root@cert-rhosp-01.lab.eng.rdu2.redhat.com"
@@ -643,9 +644,9 @@ phase2_hub_bootstrap() {
   ssh_hyp "
     cd /home/kni
     if [ -d openshift-virtualization-gitops ]; then
-      cd openshift-virtualization-gitops && git pull
+      cd openshift-virtualization-gitops && git fetch --all && git checkout ${GITOPS_BRANCH} && git pull
     else
-      git clone ${GITOPS_REPO}
+      git clone -b ${GITOPS_BRANCH} ${GITOPS_REPO}
       cd openshift-virtualization-gitops
     fi
   "
@@ -669,9 +670,9 @@ phase2_configure_argocd() {
   ssh_hyp "
     cd /home/kni
     if [ -d openshift-virtualization-gitops ]; then
-      cd openshift-virtualization-gitops && git pull
+      cd openshift-virtualization-gitops && git fetch --all && git checkout ${GITOPS_BRANCH} && git pull
     else
-      git clone ${GITOPS_REPO}
+      git clone -b ${GITOPS_BRANCH} ${GITOPS_REPO}
     fi
   "
 
@@ -680,6 +681,7 @@ phase2_configure_argocd() {
   ssh_hyp "
     export KUBECONFIG=${HUB_KUBECONFIG}
     export gitops_repo='${GITOPS_REPO}'
+    export gitops_branch='${GITOPS_BRANCH}'
     export cluster_name='hub'
     export cluster_base_domain=\$(oc get ingresses.config.openshift.io cluster -o jsonpath='{.spec.domain}' | sed 's/^apps\.//')
     export platform_base_domain=\${cluster_base_domain}
@@ -768,6 +770,7 @@ phase2_apply_root_app() {
   ssh_hyp "
     export KUBECONFIG=${HUB_KUBECONFIG}
     export gitops_repo='${GITOPS_REPO}'
+    export gitops_branch='${GITOPS_BRANCH}'
     export cluster_name='hub'
     envsubst < ${GITOPS_DIR}/.bootstrap/root-application.yaml | oc apply -f -
   "
@@ -897,6 +900,7 @@ phase4_spoke_gitops_bootstrap() {
     ssh_hyp "
       export KUBECONFIG=/tmp/${CLUSTER}-kubeconfig
       export gitops_repo='${GITOPS_REPO}'
+      export gitops_branch='${GITOPS_BRANCH}'
       export cluster_name='${CLUSTER}'
       export cluster_base_domain='${!SPOKE_BASE_DOMAIN_VAR}'
       export platform_base_domain='${!SPOKE_BASE_DOMAIN_VAR}'
@@ -914,6 +918,7 @@ phase4_spoke_gitops_bootstrap() {
     ssh_hyp "
       export KUBECONFIG=/tmp/${CLUSTER}-kubeconfig
       export gitops_repo='${GITOPS_REPO}'
+      export gitops_branch='${GITOPS_BRANCH}'
       export cluster_name='${CLUSTER}'
       envsubst < ${GITOPS_DIR}/.bootstrap/root-application.yaml | oc apply -f -
     "
