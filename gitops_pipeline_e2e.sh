@@ -41,9 +41,9 @@ set -euo pipefail
 
 # ========================= CONFIGURATION ==================================
 
-HYPERVISOR="cert-rhosp-01.lab.eng.rdu2.redhat.com"
-HYPERVISOR_USER="root"
-LIBVIRT_NETWORK="ocp3m0w-ic4s20"
+HYPERVISOR="${HYPERVISOR:-cert-rhosp-01.lab.eng.rdu2.redhat.com}"
+HYPERVISOR_USER="${HYPERVISOR_USER:-root}"
+LIBVIRT_NETWORK="${LIBVIRT_NETWORK:-ocp3m0w-ic4s20}"
 GATEWAY="192.168.135.1"
 DNS_SERVER="192.168.135.1"
 SUBNET_PREFIX="24"
@@ -1151,6 +1151,8 @@ while [[ $# -gt 0 ]]; do
   case $1 in
     --phase)     PHASE="$2"; shift 2 ;;
     --clusters)  CLUSTER_SCOPE="$2"; shift 2 ;;
+    --host)      HYPERVISOR="$2"; shift 2 ;;
+    --network)   LIBVIRT_NETWORK="$2"; shift 2 ;;
     --cleanup)   DO_CLEANUP=true; shift ;;
     --day2-only) DAY2_ONLY=true; shift ;;
     --local)     RUN_LOCAL=true; shift ;;
@@ -1158,6 +1160,8 @@ while [[ $# -gt 0 ]]; do
       echo "Usage: $0 [OPTIONS]"
       echo ""
       echo "Options:"
+      echo "  --host <hostname>        Hypervisor hostname (default: cert-rhosp-01.lab.eng.rdu2.redhat.com)"
+      echo "  --network <network>      Libvirt network name (default: ocp3m0w-ic4s20)"
       echo "  --clusters <etl4|both>   Deploy etl4 only or both clusters (default: both)"
       echo "  --phase <PHASE>          Run a specific phase only:"
       echo "                             hub   - Hub GitOps bootstrap"
