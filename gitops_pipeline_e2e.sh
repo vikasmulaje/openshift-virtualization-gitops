@@ -43,22 +43,18 @@ set -euo pipefail
 
 HYPERVISOR="cert-rhosp-01.lab.eng.rdu2.redhat.com"
 HYPERVISOR_USER="root"
-LIBVIRT_NETWORK="ocp3m0w-ic4s20"
-GATEWAY="192.168.135.1"
-DNS_SERVER="192.168.135.1"
-SUBNET_PREFIX="24"
+GITOPS_BRANCH="${GITOPS_BRANCH:-openshift-4.21}"
+# Network profile is initialized after argument parsing (see init_network_profile)
 SUSHY_PORT="8000"
 SUSHY_IMAGE="quay.io/ocp-edge-qe/sushy-tools:latest"
 
 HUB_KUBECONFIG="/home/kni/clusterconfigs/auth/kubeconfig"
 GITOPS_REPO="https://github.com/vikasmulaje/openshift-virtualization-gitops.git"
 # GITOPS_REPO_SSH="git@github.com:vikasmulaje/openshift-virtualization-gitops.git"
-GITOPS_BRANCH="${GITOPS_BRANCH:-openshift-4.21}"
 GITOPS_DIR="/home/kni/openshift-virtualization-gitops"
 PULL_SECRET_FILE="/home/kni/pull-secret.json"
 SSH_KEY="ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCuvmmrAPF/axpjIrcJ6pdZ7Ale6XBOCUNanM0fTNOoY7emN/39PwZ7c4LQPvWI0MifjE0UgzuLSPwNGEeH/j8PM2Vy/Bp/h2r09rZ3ti8oaBgcV+UBafOd/85H6O/NMMSiGAubM9JUw0+z5q9yuESTZAPwGcp2gsgC1Ray5YZSIUcH7sSeZk0o6IOsZ8f08L4eiGwkTRZpZ20PRXKxATibxLz7cdzfm01G0ShizchaagOrbLaPXVN9s33L+kM+R4QfoWvhsUIroa3xzUp91n0QbNGj/hBO0OlXiPpitFQFx7F0AZi/ZuJiaYbTpiGlM0SwWPg1IT0a+E44q9gsRHKFuf5Ehpzm/sNb5+eAo0bSGivcwELEh1kzuWOsxPNMGS07I/r+vZ0PNu4fXB7oVH2Ox9hCIfNEsmH8BOK3fLsxp1Eg6QyTf1rKkFnw2iq4ZG/fyxwgPvdLbP24TRH5+fbqSp7EC9tZGKY2E8rRCufB82nbqR5bCChchRL8dmNipkc= root@cert-rhosp-01.lab.eng.rdu2.redhat.com"
 
-OCP_VERSION_IMAGE="${OCP_VERSION_IMAGE:-img4.21.2-x86-64-appsub}"
 VM_VCPUS=4
 VM_DISK_GB=120
 
@@ -76,27 +72,57 @@ CLUSTER_SCOPE="both"
 RUN_LOCAL=false
 
 
-# ---- etl4 cluster configuration ----
-declare -A ETL4_NODES
-ETL4_NODES["master-0"]="UUID=10fcb067-2230-44db-b4d5-987298a23227|MAC=52:54:00:aa:04:00|IP=192.168.135.160"
-ETL4_NODES["master-1"]="UUID=024bcb2a-9550-43b5-a6d1-025f84e3bede|MAC=52:54:00:aa:04:01|IP=192.168.135.161"
-ETL4_NODES["master-2"]="UUID=0b78f27a-de93-4ae2-90ae-ea347e757823|MAC=52:54:00:aa:04:02|IP=192.168.135.162"
-ETL4_API_VIP="192.168.135.165"
-ETL4_INGRESS_VIP="192.168.135.166"
-ETL4_POD_CIDR="10.136.0.0/14"
-ETL4_SVC_CIDR="172.32.0.0/16"
-ETL4_BASE_DOMAIN="etl4.qe.lab.redhat.com"
+# Cluster node configs are initialized after argument parsing (see init_network_profile)
 
-# ---- etl6 cluster configuration ----
-declare -A ETL6_NODES
-ETL6_NODES["master-0"]="UUID=d7708481-e48d-4216-8a48-f20e22a84752|MAC=52:54:00:aa:06:00|IP=192.168.135.170"
-ETL6_NODES["master-1"]="UUID=0e36b24d-a59a-4268-8540-4410cddd88d6|MAC=52:54:00:aa:06:01|IP=192.168.135.171"
-ETL6_NODES["master-2"]="UUID=271e0e77-b2ec-45ae-9fe4-f37ba6cbbd40|MAC=52:54:00:aa:06:02|IP=192.168.135.172"
-ETL6_API_VIP="192.168.135.175"
-ETL6_INGRESS_VIP="192.168.135.176"
-ETL6_POD_CIDR="10.128.0.0/14"
-ETL6_SVC_CIDR="172.30.0.0/16"
-ETL6_BASE_DOMAIN="etl6.qe.lab.redhat.com"
+
+# ========================= NETWORK PROFILE ================================
+
+init_network_profile() {
+  # Branch-based network profile: each OCP version uses a different
+  # libvirt network and subnet. Add new entries for new hub clusters.
+  case "${GITOPS_BRANCH}" in
+    openshift-4.21)
+      LIBVIRT_NETWORK="${LIBVIRT_NETWORK:-ocp3m0w-ic4s21}"
+      NETWORK_SUBNET="192.168.139"
+      OCP_VERSION_IMAGE="${OCP_VERSION_IMAGE:-img4.21.2-x86-64-appsub}"
+      ;;
+    main|openshift-4.20)
+      LIBVIRT_NETWORK="${LIBVIRT_NETWORK:-ocp3m0w-ic4s20}"
+      NETWORK_SUBNET="192.168.135"
+      OCP_VERSION_IMAGE="${OCP_VERSION_IMAGE:-img4.20.14-x86-64-appsub}"
+      ;;
+    *)
+      log_error "Unknown GITOPS_BRANCH=${GITOPS_BRANCH}. Add a network profile to init_network_profile()."
+      exit 1
+      ;;
+  esac
+
+  GATEWAY="${NETWORK_SUBNET}.1"
+  DNS_SERVER="${NETWORK_SUBNET}.1"
+  SUBNET_PREFIX="24"
+
+  # ---- etl4 cluster configuration ----
+  declare -gA ETL4_NODES
+  ETL4_NODES["master-0"]="UUID=10fcb067-2230-44db-b4d5-987298a23227|MAC=52:54:00:aa:04:00|IP=${NETWORK_SUBNET}.160"
+  ETL4_NODES["master-1"]="UUID=024bcb2a-9550-43b5-a6d1-025f84e3bede|MAC=52:54:00:aa:04:01|IP=${NETWORK_SUBNET}.161"
+  ETL4_NODES["master-2"]="UUID=0b78f27a-de93-4ae2-90ae-ea347e757823|MAC=52:54:00:aa:04:02|IP=${NETWORK_SUBNET}.162"
+  ETL4_API_VIP="${NETWORK_SUBNET}.165"
+  ETL4_INGRESS_VIP="${NETWORK_SUBNET}.166"
+  ETL4_POD_CIDR="10.136.0.0/14"
+  ETL4_SVC_CIDR="172.32.0.0/16"
+  ETL4_BASE_DOMAIN="etl4.qe.lab.redhat.com"
+
+  # ---- etl6 cluster configuration ----
+  declare -gA ETL6_NODES
+  ETL6_NODES["master-0"]="UUID=d7708481-e48d-4216-8a48-f20e22a84752|MAC=52:54:00:aa:06:00|IP=${NETWORK_SUBNET}.170"
+  ETL6_NODES["master-1"]="UUID=0e36b24d-a59a-4268-8540-4410cddd88d6|MAC=52:54:00:aa:06:01|IP=${NETWORK_SUBNET}.171"
+  ETL6_NODES["master-2"]="UUID=271e0e77-b2ec-45ae-9fe4-f37ba6cbbd40|MAC=52:54:00:aa:06:02|IP=${NETWORK_SUBNET}.172"
+  ETL6_API_VIP="${NETWORK_SUBNET}.175"
+  ETL6_INGRESS_VIP="${NETWORK_SUBNET}.176"
+  ETL6_POD_CIDR="10.128.0.0/14"
+  ETL6_SVC_CIDR="172.30.0.0/16"
+  ETL6_BASE_DOMAIN="etl6.qe.lab.redhat.com"
+}
 
 # ========================= HELPERS ========================================
 
@@ -1158,6 +1184,8 @@ while [[ $# -gt 0 ]]; do
     --clusters)  CLUSTER_SCOPE="$2"; shift 2 ;;
     --cleanup)   DO_CLEANUP=true; shift ;;
     --day2-only) DAY2_ONLY=true; shift ;;
+    --branch)    GITOPS_BRANCH="$2"; shift 2 ;;
+    --network)   LIBVIRT_NETWORK="$2"; shift 2 ;;
     --local)     RUN_LOCAL=true; shift ;;
     --help|-h)
       echo "Usage: $0 [OPTIONS]"
@@ -1170,6 +1198,9 @@ while [[ $# -gt 0 ]]; do
       echo "                             spoke - Spoke provisioning wait"
       echo "                             day2  - Day-2 operations"
       echo "                             all   - Full end-to-end (default)"
+      echo "  --branch <BRANCH>        Git branch to use (default: openshift-4.21)"
+      echo "                             Sets network profile automatically"
+      echo "  --network <NAME>         Override libvirt network name"
       echo "  --cleanup                Destroy existing VMs before creating new ones"
       echo "  --day2-only              Extract kubeconfigs + all day-2 steps"
       echo "  --local                  Run directly on the hypervisor (no SSH)"
@@ -1192,6 +1223,9 @@ else
   RUN_MODE="remote (SSH from laptop)"
 fi
 
+# Initialize network profile based on --branch (or default)
+init_network_profile
+
 DEPLOY_LIST=$(get_deploy_clusters)
 
 # etl4-only gets 32GB per VM; both clusters get 24GB to fit within 256GB hypervisor
@@ -1210,6 +1244,8 @@ echo "=============================================="
 echo "  Hypervisor: ${HYPERVISOR}"
 echo "  Hub:        ${HUB_KUBECONFIG}"
 echo "  GitOps:     ${GITOPS_REPO}"
+echo "  Branch:     ${GITOPS_BRANCH}"
+echo "  Network:    ${LIBVIRT_NETWORK} (${NETWORK_SUBNET}.0/24)"
 echo "  Clusters:   ${DEPLOY_LIST}"
 echo "  VM RAM:     ${VM_MEMORY_LABEL} (${VM_MEMORY_KB} KiB)"
 echo "  Phase:      ${PHASE}"
