@@ -28,8 +28,8 @@ helmCharts:
       networking:
         podCIDR: 10.128.0.0/14
         serviceCIDR: 172.30.0.0/16
-        ingressVIP: "192.168.135.176"
-        apiVIP: "192.168.135.175"      
+        ingressVIP: "192.168.139.176"
+        apiVIP: "192.168.139.175"      
   - name: cluster-registration
     releaseName: etl6
     namespace: etl6

@@ -14,17 +14,17 @@ spec:
       ipv4:
         enabled: true
         address:
-          - ip: 192.168.135.172
+          - ip: 192.168.139.172
             prefix-length: 24
         dhcp: false
     dns-resolver:
       config:
         server:
-        - 192.168.135.1
+        - 192.168.139.1
     routes:
       config:
       - destination: 0.0.0.0/0
-        next-hop-address: 192.168.135.1
+        next-hop-address: 192.168.139.1
         next-hop-interface: enp1s0
   interfaces:
     - name: enp1s0
