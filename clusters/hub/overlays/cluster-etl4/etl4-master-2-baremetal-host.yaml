@@ -15,7 +15,7 @@ metadata:
 spec:
   automatedCleaningMode: disabled
   bmc:
-    address: "redfish-virtualmedia://192.168.135.1:8000/redfish/v1/Systems/0b78f27a-de93-4ae2-90ae-ea347e757823"
+    address: "redfish-virtualmedia://192.168.139.1:8000/redfish/v1/Systems/0b78f27a-de93-4ae2-90ae-ea347e757823"
     credentialsName: bmc-credentials
     disableCertificateVerification: true
   bootMACAddress: "52:54:00:aa:04:02"
