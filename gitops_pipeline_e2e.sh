@@ -55,7 +55,7 @@ GITOPS_DIR="/home/kni/openshift-virtualization-gitops"
 PULL_SECRET_FILE="/home/kni/pull-secret.json"
 SSH_KEY="ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCuvmmrAPF/axpjIrcJ6pdZ7Ale6XBOCUNanM0fTNOoY7emN/39PwZ7c4LQPvWI0MifjE0UgzuLSPwNGEeH/j8PM2Vy/Bp/h2r09rZ3ti8oaBgcV+UBafOd/85H6O/NMMSiGAubM9JUw0+z5q9yuESTZAPwGcp2gsgC1Ray5YZSIUcH7sSeZk0o6IOsZ8f08L4eiGwkTRZpZ20PRXKxATibxLz7cdzfm01G0ShizchaagOrbLaPXVN9s33L+kM+R4QfoWvhsUIroa3xzUp91n0QbNGj/hBO0OlXiPpitFQFx7F0AZi/ZuJiaYbTpiGlM0SwWPg1IT0a+E44q9gsRHKFuf5Ehpzm/sNb5+eAo0bSGivcwELEh1kzuWOsxPNMGS07I/r+vZ0PNu4fXB7oVH2Ox9hCIfNEsmH8BOK3fLsxp1Eg6QyTf1rKkFnw2iq4ZG/fyxwgPvdLbP24TRH5+fbqSp7EC9tZGKY2E8rRCufB82nbqR5bCChchRL8dmNipkc= root@cert-rhosp-01.lab.eng.rdu2.redhat.com"
 
-VM_VCPUS=4
+VM_VCPUS=4    # default, overridden below by scope
 VM_DISK_GB=120
 
 BMC_USERNAME="admin"
@@ -1228,11 +1228,13 @@ init_network_profile
 
 DEPLOY_LIST=$(get_deploy_clusters)
 
-# etl4-only gets 32GB per VM; both clusters get 24GB to fit within 256GB hypervisor
+# etl4-only: 8 vCPUs + 32GB RAM; both clusters: 4 vCPUs + 24GB RAM (fit within 64 threads / 250GB)
 if [ "$CLUSTER_SCOPE" = "etl4" ]; then
+  VM_VCPUS=8
   VM_MEMORY_KB=33554432   # 32GB
   VM_MEMORY_LABEL="32GB"
 else
+  VM_VCPUS=4
   VM_MEMORY_KB=25165824   # 24GB
   VM_MEMORY_LABEL="24GB"
 fi
@@ -1247,7 +1249,7 @@ echo "  GitOps:     ${GITOPS_REPO}"
 echo "  Branch:     ${GITOPS_BRANCH}"
 echo "  Network:    ${LIBVIRT_NETWORK} (${NETWORK_SUBNET}.0/24)"
 echo "  Clusters:   ${DEPLOY_LIST}"
-echo "  VM RAM:     ${VM_MEMORY_LABEL} (${VM_MEMORY_KB} KiB)"
+echo "  VM Spec:    ${VM_VCPUS} vCPUs, ${VM_MEMORY_LABEL} RAM"
 echo "  Phase:      ${PHASE}"
 echo "  Cleanup:    ${DO_CLEANUP}"
 echo "  Mode:       ${RUN_MODE}"
