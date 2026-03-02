@@ -862,29 +862,48 @@ phase3_wait_spoke_provisioning() {
 
   for CLUSTER in $(get_deploy_clusters); do
     log_info "Waiting for $CLUSTER cluster deployment to be provisioned"
-    wait_for_condition "$CLUSTER ClusterDeployment Provisioned" \
-      "hub_oc 'get clusterdeployment ${CLUSTER} -n ${CLUSTER} -o jsonpath={.status.installedTimestamp}' 2>/dev/null | grep -q ." \
-      3600 30
-
-    log_info "Monitoring $CLUSTER installation progress..."
     local TIMEOUT=3600
     local ELAPSED=0
-    local CHECK_INTERVAL=15
+    local CHECK_INTERVAL=30
+    local PREV_PCT=""
+
     while [ $ELAPSED -lt $TIMEOUT ]; do
-      local STATUS=$(hub_oc "get agentclusterinstall ${CLUSTER} -n ${CLUSTER} -o jsonpath='{.status.debugInfo.state}'" 2>/dev/null || echo "unknown")
-      local STATE_INFO=$(hub_oc "get agentclusterinstall ${CLUSTER} -n ${CLUSTER} -o jsonpath='{.status.debugInfo.stateInfo}'" 2>/dev/null || echo "")
-
-      log_info "$CLUSTER install state [${ELAPSED}s]: $STATUS - $STATE_INFO"
-
-      if echo "$STATUS" | grep -qi "adding-hosts\|installed"; then
-        log_ok "$CLUSTER cluster installation complete (${ELAPSED}s)"
+      local INSTALLED=$(hub_oc "get clusterdeployment ${CLUSTER} -n ${CLUSTER} -o jsonpath={.status.installedTimestamp}" 2>/dev/null)
+      if [ -n "$INSTALLED" ]; then
+        log_ok "$CLUSTER ClusterDeployment provisioned (${ELAPSED}s)"
         break
       fi
+
+      local PCT=$(hub_oc "get agentclusterinstall ${CLUSTER} -n ${CLUSTER} -o jsonpath={.status.progress.totalPercentage}" 2>/dev/null || echo "0")
+      local STATE=$(hub_oc "get agentclusterinstall ${CLUSTER} -n ${CLUSTER} -o jsonpath={.status.debugInfo.state}" 2>/dev/null || echo "unknown")
+      local STATE_INFO=$(hub_oc "get agentclusterinstall ${CLUSTER} -n ${CLUSTER} -o jsonpath={.status.debugInfo.stateInfo}" 2>/dev/null || echo "")
+      local HOSTS_DONE=$(hub_oc "get agent -n ${CLUSTER} --no-headers" 2>/dev/null | grep -c "Done" || echo "0")
+      local HOSTS_TOTAL=$(hub_oc "get agent -n ${CLUSTER} --no-headers" 2>/dev/null | wc -l | tr -d " " || echo "0")
+
+      if [ "$PCT" != "$PREV_PCT" ] || [ $((ELAPSED % 120)) -eq 0 ]; then
+        log_info "$CLUSTER [${ELAPSED}s] ${PCT}% | state: ${STATE} | hosts: ${HOSTS_DONE}/${HOSTS_TOTAL} done | ${STATE_INFO}"
+        PREV_PCT="$PCT"
+      fi
+
+      if echo "$STATE" | grep -qi "adding-hosts\|installed"; then
+        log_ok "$CLUSTER cluster installation complete -- ${PCT}% (${ELAPSED}s)"
+        break
+      fi
+
+      if echo "$STATE" | grep -qi "error\|failed"; then
+        log_error "$CLUSTER installation failed: $STATE - $STATE_INFO"
+        return 1
+      fi
+
       sleep $CHECK_INTERVAL
       ELAPSED=$((ELAPSED + CHECK_INTERVAL))
-      # Back off after 5 min of monitoring
-      if [ $ELAPSED -gt 300 ] && [ $CHECK_INTERVAL -lt 30 ]; then CHECK_INTERVAL=30; fi
+      if [ $ELAPSED -gt 300 ] && [ $CHECK_INTERVAL -lt 60 ]; then CHECK_INTERVAL=60; fi
     done
+
+    if [ $ELAPSED -ge $TIMEOUT ]; then
+      log_error "Timeout waiting for $CLUSTER ClusterDeployment (${TIMEOUT}s)"
+      return 1
+    fi
   done
 }
 
