@@ -22,6 +22,10 @@ spec:
       hostPrefix: {{ .Values.networking.hostPrefix }}
     serviceNetwork:
     - {{ .Values.networking.serviceCIDR }}
+    {{- if .Values.networking.machineNetwork }}
+    machineNetwork:
+    - cidr: {{ .Values.networking.machineNetwork }}
+    {{- end }}
   ingressVIP: {{ .Values.networking.ingressVIP }}
   apiVIP: {{ .Values.networking.apiVIP }}
   sshPublicKey: {{ .Values.sshKey }}

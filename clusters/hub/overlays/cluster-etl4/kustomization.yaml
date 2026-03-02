@@ -29,7 +29,8 @@ helmCharts:
         podCIDR: 10.136.0.0/14
         serviceCIDR: 172.32.0.0/16
         ingressVIP: "192.168.127.166"
-        apiVIP: "192.168.127.165"      
+        apiVIP: "192.168.127.165"
+        machineNetwork: "192.168.127.0/24"      
 
   - name: cluster-registration
     releaseName: etl4
