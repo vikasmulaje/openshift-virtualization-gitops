@@ -672,6 +672,9 @@ phase2_hub_bootstrap() {
   ssh_hyp "
     git config --global --add safe.directory /home/kni/openshift-virtualization-gitops 2>/dev/null || true
     cd /home/kni
+    if [ -d openshift-virtualization-gitops ] && [ ! -w openshift-virtualization-gitops/.git ]; then
+      rm -rf openshift-virtualization-gitops
+    fi
     if [ -d openshift-virtualization-gitops ]; then
       cd openshift-virtualization-gitops && git fetch --all && git checkout ${GITOPS_BRANCH} && git pull
     else
@@ -699,6 +702,9 @@ phase2_configure_argocd() {
   ssh_hyp "
     git config --global --add safe.directory /home/kni/openshift-virtualization-gitops 2>/dev/null || true
     cd /home/kni
+    if [ -d openshift-virtualization-gitops ] && [ ! -w openshift-virtualization-gitops/.git ]; then
+      rm -rf openshift-virtualization-gitops
+    fi
     if [ -d openshift-virtualization-gitops ]; then
       cd openshift-virtualization-gitops && git fetch --all && git checkout ${GITOPS_BRANCH} && git pull
     else
