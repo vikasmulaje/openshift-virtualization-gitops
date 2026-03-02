@@ -152,7 +152,7 @@ get_deploy_clusters() {
 
 run_cmd() {
   if [ "$RUN_LOCAL" = true ]; then
-    sudo bash -c "$*"
+    sudo env "PATH=$PATH" bash -c "$*"
   else
     ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 ${HYPERVISOR_USER}@${HYPERVISOR} "$@"
   fi
@@ -164,7 +164,7 @@ ssh_hyp() {
 
 hub_oc() {
   if [ "$RUN_LOCAL" = true ]; then
-    sudo KUBECONFIG=${HUB_KUBECONFIG} oc $*
+    sudo env "PATH=$PATH" KUBECONFIG=${HUB_KUBECONFIG} oc $*
   else
     ssh_hyp "export KUBECONFIG=${HUB_KUBECONFIG}; oc $*"
   fi
@@ -173,7 +173,7 @@ hub_oc() {
 spoke_oc() {
   local cluster=$1; shift
   if [ "$RUN_LOCAL" = true ]; then
-    sudo KUBECONFIG=/tmp/${cluster}-kubeconfig oc $*
+    sudo env "PATH=$PATH" KUBECONFIG=/tmp/${cluster}-kubeconfig oc $*
   else
     ssh_hyp "export KUBECONFIG=/tmp/${cluster}-kubeconfig; oc $*"
   fi
@@ -242,16 +242,16 @@ preflight_checks() {
     FAIL=true
   fi
 
-  if ! sudo KUBECONFIG=${HUB_KUBECONFIG} oc get nodes --no-headers &>/dev/null; then
+  if ! sudo env "PATH=$PATH" KUBECONFIG=${HUB_KUBECONFIG} oc get nodes --no-headers &>/dev/null; then
     log_error "Cannot reach hub cluster (KUBECONFIG=${HUB_KUBECONFIG})"
     FAIL=true
   else
     local NODE_COUNT
-    NODE_COUNT=$(sudo KUBECONFIG=${HUB_KUBECONFIG} oc get nodes --no-headers 2>/dev/null | grep -c Ready || echo 0)
+    NODE_COUNT=$(sudo env "PATH=$PATH" KUBECONFIG=${HUB_KUBECONFIG} oc get nodes --no-headers 2>/dev/null | grep -c Ready || echo 0)
     log_ok "Hub cluster reachable ($NODE_COUNT nodes Ready)"
   fi
 
-  if ! sudo virsh net-info "${LIBVIRT_NETWORK}" &>/dev/null; then
+  if ! sudo env "PATH=$PATH" virsh net-info "${LIBVIRT_NETWORK}" &>/dev/null; then
     log_error "Libvirt network not found: ${LIBVIRT_NETWORK}"
     FAIL=true
   else
