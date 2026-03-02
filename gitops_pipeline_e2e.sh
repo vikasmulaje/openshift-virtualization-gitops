@@ -470,12 +470,17 @@ phase1_setup_dns() {
 
   local DNS_NEEDS_UPDATE=false
   for CLUSTER in $(get_deploy_clusters); do
+    local API_VIP_VAR="${CLUSTER^^}_API_VIP"
     local BASE_DOMAIN_VAR="${CLUSTER^^}_BASE_DOMAIN"
-    if ! echo "$NET_XML" | grep -q "${!BASE_DOMAIN_VAR}"; then
-      DNS_NEEDS_UPDATE=true
-      log_info "DNS entry for ${!BASE_DOMAIN_VAR} not found in network -- update needed"
+    if echo "$NET_XML" | grep -q "${!API_VIP_VAR}.*${!BASE_DOMAIN_VAR}\|${!BASE_DOMAIN_VAR}.*${!API_VIP_VAR}"; then
+      log_ok "DNS entry for ${!BASE_DOMAIN_VAR} correct (${!API_VIP_VAR})"
     else
-      log_ok "DNS entry for ${!BASE_DOMAIN_VAR} already present"
+      DNS_NEEDS_UPDATE=true
+      if echo "$NET_XML" | grep -q "${!BASE_DOMAIN_VAR}"; then
+        log_warn "DNS entry for ${!BASE_DOMAIN_VAR} exists but IP is wrong -- update needed"
+      else
+        log_info "DNS entry for ${!BASE_DOMAIN_VAR} not found in network -- update needed"
+      fi
     fi
   done
 
@@ -523,18 +528,17 @@ done)
 }
 
 for domain, vips in clusters.items():
-    # Check if host entry already exists
-    exists = False
-    for host in dns.findall('host'):
+    # Remove existing entry (may have stale IP) and re-add with correct IP
+    for host in list(dns.findall('host')):
         for hn in host.findall('hostname'):
             if hn.text and domain in hn.text:
-                exists = True
+                dns.remove(host)
+                print(f'Removed stale DNS host for {hn.text}')
                 break
-    if not exists:
-        host_el = ET.SubElement(dns, 'host', ip=vips['api_vip'])
-        hn_el = ET.SubElement(host_el, 'hostname')
-        hn_el.text = f'api.{domain}'
-        print(f'Added DNS host: api.{domain} -> {vips[\"api_vip\"]}')
+    host_el = ET.SubElement(dns, 'host', ip=vips['api_vip'])
+    hn_el = ET.SubElement(host_el, 'hostname')
+    hn_el.text = f'api.{domain}'
+    print(f'Set DNS host: api.{domain} -> {vips[\"api_vip\"]}')
 
 # Handle dnsmasq:options namespace
 nsmap = 'http://libvirt.org/schemas/network/dnsmasq/1.0'
@@ -560,16 +564,14 @@ PYEOF
     local OPTION_VAL="address=/apps.${!BASE_DOMAIN_VAR}/${!INGRESS_VIP_VAR}"
 
     ssh_hyp "
-      if ! grep -q '${OPTION_VAL}' /tmp/net-${LIBVIRT_NETWORK}.xml; then
-        if grep -q 'dnsmasq:options' /tmp/net-${LIBVIRT_NETWORK}.xml; then
-          sed -i '/<\/dnsmasq:options>/i\\    <dnsmasq:option value=\"${OPTION_VAL}\"/>' /tmp/net-${LIBVIRT_NETWORK}.xml
-        else
-          sed -i '/<\/network>/i\\  <dnsmasq:options>\\n    <dnsmasq:option value=\"${OPTION_VAL}\"/>\\n  </dnsmasq:options>' /tmp/net-${LIBVIRT_NETWORK}.xml
-        fi
-        echo 'Added dnsmasq option: ${OPTION_VAL}'
+      # Remove any existing apps wildcard for this domain (may have stale IP)
+      sed -i '/apps.${!BASE_DOMAIN_VAR}/d' /tmp/net-${LIBVIRT_NETWORK}.xml
+      if grep -q 'dnsmasq:options' /tmp/net-${LIBVIRT_NETWORK}.xml; then
+        sed -i '/<\/dnsmasq:options>/i\\    <dnsmasq:option value=\"${OPTION_VAL}\"/>' /tmp/net-${LIBVIRT_NETWORK}.xml
       else
-        echo 'dnsmasq option already present: ${OPTION_VAL}'
+        sed -i '/<\/network>/i\\  <dnsmasq:options>\\n    <dnsmasq:option value=\"${OPTION_VAL}\"/>\\n  </dnsmasq:options>' /tmp/net-${LIBVIRT_NETWORK}.xml
       fi
+      echo 'Set dnsmasq option: ${OPTION_VAL}'
     "
   done
 
