@@ -12,6 +12,7 @@ set -euo pipefail
 #   3. Wait for spoke cluster provisioning via ACM + Assisted Installer
 #   4. Day-2: Bootstrap ArgoCD on spoke clusters
 #   5. Day-2: Operator compliance + ArgoCD resource tuning
+#   6. (Optional) Post-deployment pytest validation (--test flag)
 #
 # Usage:
 #   ./gitops_pipeline_e2e.sh                         # Full end-to-end: both clusters
@@ -28,6 +29,11 @@ set -euo pipefail
 #   Run directly on the hypervisor (no SSH):
 #   ./gitops_pipeline_e2e.sh --local                   # Auto-run locally on hypervisor
 #   ./gitops_pipeline_e2e.sh --local --clusters etl4   # Local, etl4 only
+#
+#   Run post-deployment tests (generates HTML report):
+#   ./gitops_pipeline_e2e.sh --clusters etl4 --test    # Deploy + test
+#   ./gitops_pipeline_e2e.sh --phase spoke --test      # Spoke wait + test
+#   ./gitops_pipeline_e2e.sh --local --cleanup --test  # Full clean run + test
 #
 # Smart resume: re-run the same command after a failure and the script
 # automatically detects what's already done and skips to what's missing.
