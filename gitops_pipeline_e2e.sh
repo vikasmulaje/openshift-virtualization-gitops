@@ -41,6 +41,8 @@ set -euo pipefail
 
 # ========================= CONFIGURATION ==================================
 
+export VIRSH_DEFAULT_CONNECT_URI="qemu:///system"
+
 HYPERVISOR="cert-rhosp-01.lab.eng.rdu2.redhat.com"
 HYPERVISOR_USER="root"
 GITOPS_BRANCH="${GITOPS_BRANCH:-openshift-4.21}"
