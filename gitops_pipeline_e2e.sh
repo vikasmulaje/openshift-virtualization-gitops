@@ -1221,6 +1221,7 @@ run_step() {
 PHASE="all"
 DO_CLEANUP=false
 DAY2_ONLY=false
+RUN_TESTS=false
 
 while [[ $# -gt 0 ]]; do
   case $1 in
@@ -1232,6 +1233,7 @@ while [[ $# -gt 0 ]]; do
     --branch)    GITOPS_BRANCH="$2"; shift 2 ;;
     --network)   LIBVIRT_NETWORK="$2"; shift 2 ;;
     --local)     RUN_LOCAL=true; shift ;;
+    --test)      RUN_TESTS=true; shift ;;
     --help|-h)
       echo "Usage: $0 [OPTIONS]"
       echo ""
@@ -1250,6 +1252,7 @@ while [[ $# -gt 0 ]]; do
       echo "  --cleanup                Destroy existing VMs before creating new ones"
       echo "  --day2-only              Extract kubeconfigs + all day-2 steps"
       echo "  --local                  Run directly on the hypervisor (no SSH)"
+      echo "  --test                   Run pytest validation after deployment (HTML report)"
       echo "  --help                   Show this help message"
       exit 0
       ;;
@@ -1299,6 +1302,7 @@ echo "  VM Spec:    ${VM_VCPUS} vCPUs, ${VM_MEMORY_LABEL} RAM"
 echo "  Phase:      ${PHASE}"
 echo "  Cleanup:    ${DO_CLEANUP}"
 echo "  Mode:       ${RUN_MODE}"
+echo "  Run Tests:  ${RUN_TESTS}"
 echo "=============================================="
 echo ""
 
@@ -1386,6 +1390,62 @@ case "$PHASE" in
     ;;
 esac
 
+# ========================= PHASE 6: POST-DEPLOYMENT TESTS ================
+
+phase6_run_tests() {
+  log_info "=== PHASE 6: Post-deployment validation tests ==="
+
+  local SCRIPT_DIR
+  SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+  local TEST_FILE="${SCRIPT_DIR}/test_deployment.py"
+  local REPORT_DIR="/tmp/deployment-reports"
+  local REPORT_FILE="${REPORT_DIR}/report-$(date +%Y%m%d-%H%M%S).html"
+
+  if [ ! -f "$TEST_FILE" ]; then
+    # Try the gitops dir on the hypervisor
+    TEST_FILE="${GITOPS_DIR}/test_deployment.py"
+  fi
+
+  if [ ! -f "$TEST_FILE" ]; then
+    log_error "test_deployment.py not found in ${SCRIPT_DIR} or ${GITOPS_DIR}"
+    return 1
+  fi
+
+  log_info "Installing test dependencies"
+  pip3 install --quiet pytest pytest-html 2>/dev/null ||     pip3 install --quiet --user pytest pytest-html 2>/dev/null ||     log_warn "pip3 install failed -- pytest may already be available"
+
+  mkdir -p "${REPORT_DIR}"
+
+  local CLUSTERS_CSV
+  CLUSTERS_CSV=$(get_deploy_clusters | tr ' ' ',')
+
+  log_info "Running tests: ${TEST_FILE}"
+  log_info "Clusters: ${CLUSTERS_CSV}"
+  log_info "Report:   ${REPORT_FILE}"
+
+  HUB_KUBECONFIG="${HUB_KUBECONFIG}" \
+  SPOKE_CLUSTERS="${CLUSTERS_CSV}" \
+  SPOKE_KUBECONFIG_DIR="/tmp" \
+  EXPECTED_OCP_VERSION="${OCP_VERSION_IMAGE%%.*}.${OCP_VERSION_IMAGE#*.}" \
+  python3 -m pytest "${TEST_FILE}" \
+    -v \
+    --tb=short \
+    --html="${REPORT_FILE}" \
+    --self-contained-html \
+    2>&1 | tee /tmp/pytest-output.log
+
+  local TEST_RC=${PIPESTATUS[0]}
+
+  if [ $TEST_RC -eq 0 ]; then
+    log_ok "All tests passed"
+  else
+    log_warn "Some tests failed (exit code: $TEST_RC)"
+  fi
+
+  log_ok "HTML report: ${REPORT_FILE}"
+  return $TEST_RC
+}
+
 echo ""
 log_ok "=== Deployment automation complete ==="
 echo ""
@@ -1401,3 +1461,7 @@ for CLUSTER in $(get_deploy_clusters); do
   echo "  /tmp/${CLUSTER}-kubeconfig"
 done
 echo ""
+
+if [ "$RUN_TESTS" = true ]; then
+  phase6_run_tests
+fi
