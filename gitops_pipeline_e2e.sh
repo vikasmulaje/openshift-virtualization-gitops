@@ -90,7 +90,7 @@ init_network_profile() {
       ;;
     main|openshift-4.20)
       LIBVIRT_NETWORK="${LIBVIRT_NETWORK:-ocp3m0w-ic4s20}"
-      NETWORK_SUBNET="192.168.135"
+      NETWORK_SUBNET="192.168.127"
       OCP_VERSION_IMAGE="${OCP_VERSION_IMAGE:-img4.20.14-x86-64-appsub}"
       ;;
     *)
@@ -624,7 +624,7 @@ phase1_setup_sushy() {
         --security-opt label=disable \
         --net host \
         --privileged \
-        -e SUSHY_EMULATOR_LIBVIRT_URI=qemu:///system?socket=/var/run/libvirt/virtqemud-sock \
+        -e SUSHY_EMULATOR_LIBVIRT_URI=qemu:///system?socket=/var/run/libvirt/libvirt-sock \
         -v /var/run/libvirt:/var/run/libvirt \
         ${SUSHY_IMAGE}
       echo 'Sushy-emulator started'
