@@ -445,7 +445,7 @@ phase1_create_vms() {
 
       local VM_XML
       VM_XML=$(phase1_generate_vm_xml "$VM_NAME" "$UUID" "$MAC" "$DISK")
-      echo "$VM_XML" | ssh_hyp "cat > /tmp/${VM_NAME}.xml && virsh define /tmp/${VM_NAME}.xml"
+      echo "$VM_XML" | ssh_hyp "rm -f /tmp/${VM_NAME}.xml; cat > /tmp/${VM_NAME}.xml && virsh define /tmp/${VM_NAME}.xml"
 
       local ACTUAL_UUID
       ACTUAL_UUID=$(ssh_hyp "virsh domuuid ${VM_NAME}")
@@ -493,8 +493,8 @@ phase1_setup_dns() {
 
   # 3. Dump current network XML and add missing DNS entries
   log_info "Updating libvirt network with spoke DNS entries"
-  ssh_hyp "virsh net-dumpxml ${LIBVIRT_NETWORK} > /tmp/net-backup-${LIBVIRT_NETWORK}.xml"
-  ssh_hyp "virsh net-dumpxml ${LIBVIRT_NETWORK} > /tmp/net-${LIBVIRT_NETWORK}.xml"
+  ssh_hyp "rm -f /tmp/net-backup-${LIBVIRT_NETWORK}.xml; virsh net-dumpxml ${LIBVIRT_NETWORK} > /tmp/net-backup-${LIBVIRT_NETWORK}.xml"
+  ssh_hyp "rm -f /tmp/net-${LIBVIRT_NETWORK}.xml; virsh net-dumpxml ${LIBVIRT_NETWORK} > /tmp/net-${LIBVIRT_NETWORK}.xml"
 
   # Build the DNS host entries and dnsmasq options to inject
   local DNS_HOST_ENTRIES=""
