@@ -258,6 +258,18 @@ preflight_checks() {
     log_ok "Libvirt network ${LIBVIRT_NETWORK} exists"
   fi
 
+  # Ensure current user can write to libvirt images directory
+  local IMAGES_DIR="/var/lib/libvirt/images"
+  if [ ! -w "${IMAGES_DIR}" ]; then
+    log_warn "No write access to ${IMAGES_DIR} -- fixing permissions"
+    sudo chmod 775 "${IMAGES_DIR}" 2>/dev/null && log_ok "Fixed ${IMAGES_DIR} permissions" || {
+      log_error "Cannot write to ${IMAGES_DIR} and sudo chmod failed"
+      FAIL=true
+    }
+  else
+    log_ok "Libvirt images directory writable"
+  fi
+
   if [ "$FAIL" = true ]; then
     log_error "Pre-flight checks failed -- aborting"
     exit 1
