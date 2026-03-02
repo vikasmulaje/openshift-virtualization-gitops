@@ -670,6 +670,7 @@ phase2_hub_bootstrap() {
 
   log_info "Cloning GitOps repository on hypervisor"
   ssh_hyp "
+    git config --global --add safe.directory /home/kni/openshift-virtualization-gitops 2>/dev/null || true
     cd /home/kni
     if [ -d openshift-virtualization-gitops ]; then
       cd openshift-virtualization-gitops && git fetch --all && git checkout ${GITOPS_BRANCH} && git pull
@@ -696,6 +697,7 @@ phase2_configure_argocd() {
 
   log_info "Ensuring GitOps repo is up to date"
   ssh_hyp "
+    git config --global --add safe.directory /home/kni/openshift-virtualization-gitops 2>/dev/null || true
     cd /home/kni
     if [ -d openshift-virtualization-gitops ]; then
       cd openshift-virtualization-gitops && git fetch --all && git checkout ${GITOPS_BRANCH} && git pull
