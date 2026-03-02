@@ -5,7 +5,7 @@ Post-deployment validation tests for spoke cluster provisioning.
 Usage:
     HUB_KUBECONFIG=/home/kni/clusterconfigs/auth/kubeconfig \
     SPOKE_CLUSTERS=etl4 \
-        pytest test_deployment.py -v --html=report.html --self-contained-html
+        pytest test_deployment.py -v --html=gitops-e2e-test.html --self-contained-html
 
 Environment Variables:
     HUB_KUBECONFIG          Path to hub cluster kubeconfig

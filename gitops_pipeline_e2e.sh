@@ -1399,7 +1399,7 @@ phase6_run_tests() {
   SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
   local TEST_FILE="${SCRIPT_DIR}/test_deployment.py"
   local REPORT_DIR="/tmp/deployment-reports"
-  local REPORT_FILE="${REPORT_DIR}/report-$(date +%Y%m%d-%H%M%S).html"
+  local REPORT_FILE="${REPORT_DIR}/gitops-e2e-test.html"
 
   if [ ! -f "$TEST_FILE" ]; then
     # Try the gitops dir on the hypervisor
