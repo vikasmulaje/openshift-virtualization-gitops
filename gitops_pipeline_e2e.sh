@@ -615,6 +615,15 @@ PYEOF
 phase1_setup_sushy() {
   log_info "Setting up sushy-emulator"
 
+  # Ensure libvirt socket compatibility: the sushy-tools image expects virtqemud-sock
+  # (modular daemon) but monolithic libvirtd uses libvirt-sock. Symlink if needed.
+  ssh_hyp "
+    if [ -S /var/run/libvirt/libvirt-sock ] && [ ! -e /var/run/libvirt/virtqemud-sock ]; then
+      ln -sf /var/run/libvirt/libvirt-sock /var/run/libvirt/virtqemud-sock
+      echo 'Created virtqemud-sock symlink for monolithic libvirtd'
+    fi
+  "
+
   ssh_hyp "
     if podman ps --filter name=sushy-tools --format '{{.Names}}' | grep -q sushy-tools; then
       echo 'Sushy-emulator already running'
@@ -624,7 +633,6 @@ phase1_setup_sushy() {
         --security-opt label=disable \
         --net host \
         --privileged \
-        -e SUSHY_EMULATOR_LIBVIRT_URI=qemu:///system?socket=/var/run/libvirt/libvirt-sock \
         -v /var/run/libvirt:/var/run/libvirt \
         ${SUSHY_IMAGE}
       echo 'Sushy-emulator started'
