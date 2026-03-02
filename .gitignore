@@ -7,4 +7,3 @@ clusters/hub/overlays/cluster-etl4/pull-secret.yaml
 components/mtv-configuration/vddk
 deployment_clone_cluster.md
 DEPLOYMENT-CHANGES.md
-gitops_pipeline_e2e.sh

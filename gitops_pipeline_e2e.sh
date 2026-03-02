@@ -1184,6 +1184,7 @@ while [[ $# -gt 0 ]]; do
     --clusters)  CLUSTER_SCOPE="$2"; shift 2 ;;
     --cleanup)   DO_CLEANUP=true; shift ;;
     --day2-only) DAY2_ONLY=true; shift ;;
+    --host)      HYPERVISOR="$2"; shift 2 ;;
     --branch)    GITOPS_BRANCH="$2"; shift 2 ;;
     --network)   LIBVIRT_NETWORK="$2"; shift 2 ;;
     --local)     RUN_LOCAL=true; shift ;;
@@ -1191,6 +1192,7 @@ while [[ $# -gt 0 ]]; do
       echo "Usage: $0 [OPTIONS]"
       echo ""
       echo "Options:"
+      echo "  --host <FQDN>            Hypervisor hostname (default: ${HYPERVISOR})"
       echo "  --clusters <etl4|both>   Deploy etl4 only or both clusters (default: both)"
       echo "  --phase <PHASE>          Run a specific phase only:"
       echo "                             hub   - Hub GitOps bootstrap"
