@@ -152,7 +152,7 @@ get_deploy_clusters() {
 
 run_cmd() {
   if [ "$RUN_LOCAL" = true ]; then
-    bash -c "$*"
+    sudo bash -c "$*"
   else
     ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 ${HYPERVISOR_USER}@${HYPERVISOR} "$@"
   fi
@@ -164,7 +164,7 @@ ssh_hyp() {
 
 hub_oc() {
   if [ "$RUN_LOCAL" = true ]; then
-    KUBECONFIG=${HUB_KUBECONFIG} oc $*
+    sudo KUBECONFIG=${HUB_KUBECONFIG} oc $*
   else
     ssh_hyp "export KUBECONFIG=${HUB_KUBECONFIG}; oc $*"
   fi
@@ -173,7 +173,7 @@ hub_oc() {
 spoke_oc() {
   local cluster=$1; shift
   if [ "$RUN_LOCAL" = true ]; then
-    KUBECONFIG=/tmp/${cluster}-kubeconfig oc $*
+    sudo KUBECONFIG=/tmp/${cluster}-kubeconfig oc $*
   else
     ssh_hyp "export KUBECONFIG=/tmp/${cluster}-kubeconfig; oc $*"
   fi
@@ -242,33 +242,22 @@ preflight_checks() {
     FAIL=true
   fi
 
-  if ! KUBECONFIG=${HUB_KUBECONFIG} oc get nodes --no-headers &>/dev/null; then
+  if ! sudo KUBECONFIG=${HUB_KUBECONFIG} oc get nodes --no-headers &>/dev/null; then
     log_error "Cannot reach hub cluster (KUBECONFIG=${HUB_KUBECONFIG})"
     FAIL=true
   else
     local NODE_COUNT
-    NODE_COUNT=$(KUBECONFIG=${HUB_KUBECONFIG} oc get nodes --no-headers 2>/dev/null | grep -c Ready || echo 0)
+    NODE_COUNT=$(sudo KUBECONFIG=${HUB_KUBECONFIG} oc get nodes --no-headers 2>/dev/null | grep -c Ready || echo 0)
     log_ok "Hub cluster reachable ($NODE_COUNT nodes Ready)"
   fi
 
-  if ! virsh net-info "${LIBVIRT_NETWORK}" &>/dev/null; then
+  if ! sudo virsh net-info "${LIBVIRT_NETWORK}" &>/dev/null; then
     log_error "Libvirt network not found: ${LIBVIRT_NETWORK}"
     FAIL=true
   else
     log_ok "Libvirt network ${LIBVIRT_NETWORK} exists"
   fi
 
-  # Ensure current user can write to libvirt images directory
-  local IMAGES_DIR="/var/lib/libvirt/images"
-  if [ ! -w "${IMAGES_DIR}" ]; then
-    log_warn "No write access to ${IMAGES_DIR} -- fixing permissions"
-    sudo chmod 775 "${IMAGES_DIR}" 2>/dev/null && log_ok "Fixed ${IMAGES_DIR} permissions" || {
-      log_error "Cannot write to ${IMAGES_DIR} and sudo chmod failed"
-      FAIL=true
-    }
-  else
-    log_ok "Libvirt images directory writable"
-  fi
 
   if [ "$FAIL" = true ]; then
     log_error "Pre-flight checks failed -- aborting"
