@@ -387,7 +387,7 @@ phase1_generate_vm_xml() {
     <channel type='unix'>
       <target type='virtio' name='org.qemu.guest_agent.0'/>
     </channel>
-    <watchdog model='itco' action='reset'/>
+    <watchdog model='i6300esb' action='reset'/>
     <memballoon model='virtio'/>
     <rng model='virtio'>
       <backend model='random'>/dev/urandom</backend>
