@@ -311,6 +311,16 @@ with open('/tmp/_pullsecret_merged.json', 'w') as f:
 
 # ========================= PHASE 1: INFRASTRUCTURE =======================
 
+detect_qemu_machine_type() {
+  # Auto-detect the latest Q35 machine type supported by this hypervisor
+  local detected
+  detected=$(ssh_hyp "virsh capabilities 2>/dev/null" |     grep -oP 'pc-q35-rhel[\d.]+' | sort -V | tail -1)
+  if [ -z "$detected" ]; then
+    detected="q35"
+  fi
+  echo "$detected"
+}
+
 phase1_generate_vm_xml() {
   local VM_NAME="$1"
   local UUID="$2"
@@ -344,7 +354,7 @@ phase1_generate_vm_xml() {
   <currentMemory unit='KiB'>${VM_MEMORY_KB}</currentMemory>
   <vcpu placement='static'>${VM_VCPUS}</vcpu>
   <os>
-    <type arch='x86_64' machine='pc-q35-rhel9.6.0'>hvm</type>
+    <type arch='x86_64' machine='${QEMU_MACHINE_TYPE}'>hvm</type>
   </os>
   <features>
     <acpi/>
@@ -421,7 +431,9 @@ cleanup_vms() {
 
 phase1_create_vms() {
   log_info "=== Creating VM infrastructure from saved XMLs ==="
-  log_info "VM spec: ${VM_VCPUS} vCPUs, ${VM_MEMORY_LABEL} RAM, ${VM_DISK_GB}GB disk"
+
+  QEMU_MACHINE_TYPE=$(detect_qemu_machine_type)
+  log_info "VM spec: ${VM_VCPUS} vCPUs, ${VM_MEMORY_LABEL} RAM, ${VM_DISK_GB}GB disk, machine=${QEMU_MACHINE_TYPE}"
 
   for CLUSTER in $(get_deploy_clusters); do
     log_info "Creating VMs for cluster: $CLUSTER"
