@@ -639,12 +639,21 @@ PYEOF
 phase1_setup_sushy() {
   log_info "Setting up sushy-emulator"
 
-  # Ensure libvirt socket compatibility: the sushy-tools image expects virtqemud-sock
-  # (modular daemon) but monolithic libvirtd uses libvirt-sock. Symlink if needed.
+  # Ensure libvirt socket compatibility: sushy-tools expects virtqemud-sock.
+  # Only create a symlink when monolithic libvirtd is in use; when modular
+  # virtqemud is active, its socket is managed by systemd and a symlink would
+  # conflict and break the service.
   ssh_hyp "
-    if [ -S /var/run/libvirt/libvirt-sock ] && [ ! -e /var/run/libvirt/virtqemud-sock ]; then
+    if systemctl is-active virtqemud.socket &>/dev/null; then
+      echo 'Modular virtqemud detected -- socket managed by systemd, no symlink needed'
+      if [ -L /var/run/libvirt/virtqemud-sock ]; then
+        rm -f /var/run/libvirt/virtqemud-sock
+        systemctl restart virtqemud.socket
+        echo 'Removed stale symlink and restarted virtqemud.socket'
+      fi
+    elif [ -S /var/run/libvirt/libvirt-sock ] && [ ! -e /var/run/libvirt/virtqemud-sock ]; then
       ln -sf /var/run/libvirt/libvirt-sock /var/run/libvirt/virtqemud-sock
-      echo 'Created virtqemud-sock symlink for monolithic libvirtd'
+      echo 'Monolithic libvirtd detected -- created virtqemud-sock symlink'
     fi
   "
 
