@@ -9,6 +9,7 @@ spec:
   kustomizeBuildOptions: --enable-alpha-plugins --load-restrictor LoadRestrictionsNone --helm-command /usr/local/bin/helm
   extraConfig:
     resource.customizations.useOpenLibs.minio.min.io_Tenant: 'true'
+    resource.customizations.useOpenLibs.forklift.konveyor.io_ForkliftController: 'true'
     resource.compareoptions: |
       ignoreAggregatedRoles: true
   server:
