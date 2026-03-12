@@ -267,6 +267,36 @@ spec:
       health_status.status = "Progressing"
       health_status.message = "No status info available"
       return health_status                          
+  - group: forklift.konveyor.io
+    kind: ForkliftController
+    check: |
+      local hs = {}
+      if obj.status ~= nil and obj.status.conditions ~= nil then
+        for _, condition in ipairs(obj.status.conditions) do
+          if condition.type == "Failure" and condition.status == "True" then
+            hs.status = "Degraded"
+            hs.message = condition.message or "ForkliftController has failed"
+            return hs
+          end
+        end
+        for _, condition in ipairs(obj.status.conditions) do
+          if condition.type == "Successful" and condition.status == "True" then
+            hs.status = "Healthy"
+            hs.message = condition.message or "Last reconciliation succeeded"
+            return hs
+          end
+        end
+        for _, condition in ipairs(obj.status.conditions) do
+          if condition.type == "Running" and condition.status == "True" then
+            hs.status = "Progressing"
+            hs.message = condition.message or "Reconciliation in progress"
+            return hs
+          end
+        end
+      end
+      hs.status = "Progressing"
+      hs.message = "Waiting for ForkliftController"
+      return hs
   - group: route.openshift.io
     kind: Route
     check: |
