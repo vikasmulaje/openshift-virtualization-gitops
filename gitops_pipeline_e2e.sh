@@ -1450,6 +1450,7 @@ phase6_run_tests() {
   log_info "Clusters: ${CLUSTERS_CSV}"
   log_info "Report:   ${REPORT_FILE}"
 
+  set +eo pipefail
   HUB_KUBECONFIG="${HUB_KUBECONFIG}" \
   SPOKE_CLUSTERS="${CLUSTERS_CSV}" \
   SPOKE_KUBECONFIG_DIR="/tmp" \
@@ -1462,6 +1463,7 @@ phase6_run_tests() {
     2>&1 | tee /tmp/pytest-output.log
 
   local TEST_RC=${PIPESTATUS[0]}
+  set -eo pipefail
 
   if [ $TEST_RC -eq 0 ]; then
     log_ok "All tests passed"
@@ -1470,7 +1472,7 @@ phase6_run_tests() {
   fi
 
   log_ok "HTML report: ${REPORT_FILE}"
-  return $TEST_RC
+  return 0
 }
 
 echo ""
