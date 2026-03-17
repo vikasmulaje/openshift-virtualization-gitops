@@ -882,6 +882,140 @@ phase2_wait_acm() {
   log_ok "ACM is fully operational"
 }
 
+
+# ========================= PHASE 2b: HUB POST-DEPLOY FIXES ================
+
+phase2_install_minio_operator() {
+  log_info "Installing MinIO Operator via Helm (required by aap-configuration & acm-observability)"
+
+  local HAS_CRD
+  HAS_CRD=$(hub_oc "get crd tenants.minio.min.io --no-headers" 2>/dev/null || echo "")
+  if [ -n "$HAS_CRD" ]; then
+    log_ok "MinIO Tenant CRD already exists -- skipping"
+    return 0
+  fi
+
+  ssh_hyp "
+    export KUBECONFIG=${HUB_KUBECONFIG}
+
+    helm repo add minio-operator https://operator.min.io 2>/dev/null || true
+    helm repo update 2>/dev/null
+
+    if helm status minio-operator -n minio-operator &>/dev/null; then
+      echo 'MinIO operator Helm release already exists'
+    else
+      helm install minio-operator minio-operator/operator \
+        --namespace minio-operator \
+        --create-namespace \
+        --set operator.replicaCount=1
+    fi
+
+    oc adm policy add-scc-to-user nonroot-v2 -z minio-operator -n minio-operator 2>/dev/null || true
+  "
+
+  wait_for_condition "MinIO Tenant CRD available" \
+    "hub_oc 'get crd tenants.minio.min.io --no-headers'" \
+    120 10
+
+  wait_for_condition "MinIO operator pod running" \
+    "hub_oc 'get pods -n minio-operator --no-headers 2>/dev/null' | grep -q Running" \
+    120 10
+
+  log_ok "MinIO Operator installed and running"
+}
+
+phase2_patch_forklift_crd() {
+  log_info "Patching ForkliftController CRD schema (olm_managed field for ArgoCD sync)"
+
+  local HAS_FIELD
+  HAS_FIELD=$(hub_oc "get crd forkliftcontrollers.forklift.konveyor.io -o jsonpath='{.spec.versions[0].schema.openAPIV3Schema.properties.spec.properties.olm_managed}'" 2>/dev/null || echo "")
+
+  if [ -n "$HAS_FIELD" ] && [ "$HAS_FIELD" != "''" ]; then
+    log_ok "ForkliftController CRD already has olm_managed field -- skipping"
+    return 0
+  fi
+
+  local HAS_CRD
+  HAS_CRD=$(hub_oc "get crd forkliftcontrollers.forklift.konveyor.io --no-headers" 2>/dev/null || echo "")
+  if [ -z "$HAS_CRD" ]; then
+    log_warn "ForkliftController CRD not found -- MTV operator may not be installed yet, skipping"
+    return 0
+  fi
+
+  hub_oc "patch crd forkliftcontrollers.forklift.konveyor.io --type=json -p='[{"op":"add","path":"/spec/versions/0/schema/openAPIV3Schema/properties/spec/properties/olm_managed","value":{"type":"boolean","description":"Whether the operator is managed by OLM"}}]'"
+
+  log_ok "ForkliftController CRD patched"
+}
+
+phase2_approve_hub_installplans() {
+  log_info "Approving pending InstallPlans on hub cluster"
+
+  local PENDING
+  PENDING=$(hub_oc "get installplan -A -o json" 2>/dev/null | \
+    python3 -c "
+import sys, json
+data = json.load(sys.stdin)
+for item in data.get('items', []):
+    if not item.get('spec', {}).get('approved', False):
+        ns = item['metadata']['namespace']
+        name = item['metadata']['name']
+        print(f'{ns}/{name}')
+" 2>/dev/null || true)
+
+  if [ -z "$PENDING" ]; then
+    log_ok "No pending InstallPlans on hub"
+    return 0
+  fi
+
+  for PLAN in $PENDING; do
+    local NS=$(echo $PLAN | cut -d/ -f1)
+    local NAME=$(echo $PLAN | cut -d/ -f2)
+    log_info "Approving InstallPlan $NAME in namespace $NS on hub"
+    hub_oc "patch installplan $NAME -n $NS --type merge -p '{"spec":{"approved":true}}'"
+  done
+
+  log_ok "Hub InstallPlans approved"
+}
+
+phase2_scale_down_external_dns() {
+  log_info "Checking external-dns connectivity"
+
+  local EXT_DNS_EXISTS
+  EXT_DNS_EXISTS=$(hub_oc "get deployment external-dns -n external-dns --no-headers" 2>/dev/null || echo "")
+  if [ -z "$EXT_DNS_EXISTS" ]; then
+    log_info "external-dns deployment not found -- skipping"
+    return 0
+  fi
+
+  local CRASH_LOOP
+  CRASH_LOOP=$(hub_oc "get pods -n external-dns --no-headers" 2>/dev/null | grep -c "CrashLoopBackOff" || echo "0")
+
+  if [ "$CRASH_LOOP" -gt 0 ] 2>/dev/null; then
+    log_warn "external-dns pods in CrashLoopBackOff -- scaling to 0 (DNS server likely unreachable in libvirt env)"
+    hub_oc "scale deployment external-dns -n external-dns --replicas=0"
+    log_ok "external-dns scaled down"
+  else
+    log_ok "external-dns pods are healthy"
+  fi
+}
+
+phase2_hub_post_deploy_fixes() {
+  log_info "=== Hub Post-Deployment Fixes ==="
+  phase2_approve_hub_installplans
+  phase2_install_minio_operator
+  phase2_patch_forklift_crd
+  phase2_scale_down_external_dns
+}
+
+phase4_create_spoke_prereq_namespaces() {
+  log_info "Creating prerequisite namespaces on spoke clusters"
+
+  for CLUSTER in $(get_deploy_clusters); do
+    spoke_oc $CLUSTER "create namespace openshift-power-monitoring" 2>/dev/null || true
+    log_ok "openshift-power-monitoring namespace ensured on $CLUSTER"
+  done
+}
+
 # ========================= PHASE 3: SPOKE PROVISIONING ====================
 
 phase3_wait_spoke_provisioning() {
@@ -1230,6 +1364,23 @@ check_spoke_root_apps() {
   done
 }
 
+
+check_minio_operator() {
+  hub_oc "get crd tenants.minio.min.io --no-headers" 2>/dev/null | grep -q .
+}
+
+check_forklift_crd_patched() {
+  local result
+  result=$(hub_oc "get crd forkliftcontrollers.forklift.konveyor.io -o jsonpath='{.spec.versions[0].schema.openAPIV3Schema.properties.spec.properties.olm_managed.type}'" 2>/dev/null || echo "")
+  echo "$result" | grep -q "boolean"
+}
+
+check_spoke_prereq_namespaces() {
+  for CLUSTER in $(get_deploy_clusters); do
+    spoke_oc $CLUSTER "get namespace openshift-power-monitoring --no-headers" 2>/dev/null | grep -q . || return 1
+  done
+}
+
 run_step() {
   local step_name="$1"
   local check_func="$2"
@@ -1337,7 +1488,8 @@ preflight_checks
 
 if [ "$DAY2_ONLY" = true ]; then
   run_step "Spoke kubeconfigs"       check_spoke_kubeconfigs    phase3_extract_kubeconfigs
-  run_step "Spoke ArgoCD bootstrap"  check_spoke_root_apps      phase4_spoke_gitops_bootstrap
+  run_step "Spoke ArgoCD bootstrap"  check_spoke_root_apps          phase4_spoke_gitops_bootstrap
+  run_step "Spoke prereq namespaces" check_spoke_prereq_namespaces  phase4_create_spoke_prereq_namespaces
   phase5_cleanup_failed_pods
   phase5_approve_installplans
   phase5_cleanup_failed_pods
@@ -1362,7 +1514,11 @@ case "$PHASE" in
     run_step "Hub Docker auth"        check_hub_docker_auth    phase2_patch_hub_docker_auth
     run_step "Hub spoke secrets"      check_hub_secrets        phase2_create_secrets
     run_step "Hub root application"   check_hub_root_app       phase2_apply_root_app
-    run_step "ACM fully operational"  check_hub_acm_ready      phase2_wait_acm
+    run_step "ACM fully operational"  check_hub_acm_ready        phase2_wait_acm
+    run_step "MinIO operator"         check_minio_operator       phase2_install_minio_operator
+    run_step "ForkliftController CRD" check_forklift_crd_patched phase2_patch_forklift_crd
+    phase2_approve_hub_installplans
+    phase2_scale_down_external_dns
     ;;
   spoke)
     run_step "Spoke provisioning"  check_spokes_installed     phase3_wait_spoke_provisioning
@@ -1370,8 +1526,9 @@ case "$PHASE" in
     phase3_verify_spokes
     ;;
   day2)
-    run_step "Spoke kubeconfigs"       check_spoke_kubeconfigs    phase3_extract_kubeconfigs
-    run_step "Spoke ArgoCD bootstrap"  check_spoke_root_apps      phase4_spoke_gitops_bootstrap
+    run_step "Spoke kubeconfigs"       check_spoke_kubeconfigs        phase3_extract_kubeconfigs
+    run_step "Spoke ArgoCD bootstrap"  check_spoke_root_apps          phase4_spoke_gitops_bootstrap
+    run_step "Spoke prereq namespaces" check_spoke_prereq_namespaces  phase4_create_spoke_prereq_namespaces
     phase5_cleanup_failed_pods
     phase5_approve_installplans
     phase5_cleanup_failed_pods
@@ -1392,6 +1549,12 @@ case "$PHASE" in
     run_step "Hub root application"   check_hub_root_app       phase2_apply_root_app
     run_step "ACM fully operational"  check_hub_acm_ready      phase2_wait_acm
 
+    # 1b. Hub post-deploy fixes (MinIO, CRD patches, InstallPlans)
+    run_step "MinIO operator"         check_minio_operator       phase2_install_minio_operator
+    run_step "ForkliftController CRD" check_forklift_crd_patched phase2_patch_forklift_crd
+    phase2_approve_hub_installplans
+    phase2_scale_down_external_dns
+
     # 2. VM infrastructure
     run_step "VM infrastructure"  check_vms_exist       phase1_create_vms
     phase1_setup_dns
@@ -1404,7 +1567,8 @@ case "$PHASE" in
     phase3_verify_spokes
 
     # 4. Day-2 spoke operations
-    run_step "Spoke ArgoCD bootstrap"  check_spoke_root_apps  phase4_spoke_gitops_bootstrap
+    run_step "Spoke ArgoCD bootstrap"  check_spoke_root_apps          phase4_spoke_gitops_bootstrap
+    run_step "Spoke prereq namespaces" check_spoke_prereq_namespaces  phase4_create_spoke_prereq_namespaces
     phase5_cleanup_failed_pods
     phase5_approve_installplans
     phase5_cleanup_failed_pods
