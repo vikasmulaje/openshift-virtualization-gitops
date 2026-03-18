@@ -139,6 +139,8 @@ class TestHubAppStatus:
             "get deployment openshift-gitops-server -n openshift-gitops"
         )
         replicas = deploy["status"].get("availableReplicas", 0)
+        desired = deploy["spec"].get("replicas", 1)
+        print(f"\nHub ArgoCD server: {replicas}/{desired} replicas available")
         assert replicas >= 1, "ArgoCD server has no available replicas"
 
     @pytest.mark.parametrize("app_name", HUB_CRITICAL_ARGOCD_APPS)
@@ -148,6 +150,7 @@ class TestHubAppStatus:
         )
         sync = app["status"].get("sync", {}).get("status", "")
         health = app["status"].get("health", {}).get("status", "")
+        print(f"\n{app_name}: sync={sync}  health={health}")
         if app_name == "root-applications":
             assert sync in ("Synced", "OutOfSync"), f"{app_name}: sync={sync}"
         else:
@@ -182,6 +185,7 @@ class TestHubAppStatus:
         )
         sync = app["status"].get("sync", {}).get("status", "")
         health = app["status"].get("health", {}).get("status", "")
+        print(f"\nHub app '{cluster}': sync={sync}  health={health}")
         assert sync == "Synced", f"{cluster}: hub app sync={sync}"
         assert health == "Healthy", f"{cluster}: hub app health={health}"
 
@@ -195,16 +199,20 @@ class TestHubClusterHealth:
 
     def test_hub_version_available(self):
         cv = hub_oc_json("get clusterversion version")
+        version = cv["status"]["desired"]["version"]
         conds = get_conditions_map(cv)
         avail = conds.get("Available", {})
+        print(f"\nHub ClusterVersion: {version}  Available={avail.get('status', '?')}")
         assert avail.get("status") == "True", (
             f"ClusterVersion not available: {avail.get('message', '')}"
         )
 
     def test_hub_version_not_progressing(self):
         cv = hub_oc_json("get clusterversion version")
+        version = cv["status"]["desired"]["version"]
         conds = get_conditions_map(cv)
         prog = conds.get("Progressing", {})
+        print(f"\nHub ClusterVersion: {version}  Progressing={prog.get('status', '?')}")
         assert prog.get("status") == "False", (
             f"Still progressing: {prog.get('message', '')}"
         )
@@ -242,6 +250,8 @@ class TestHubClusterHealth:
     def test_hub_minimum_node_count(self):
         nodes = hub_oc_json("get nodes")
         count = len(nodes["items"])
+        names = [n["metadata"]["name"] for n in nodes["items"]]
+        print(f"\nHub node count: {count}  nodes: {names}")
         assert count >= 3, f"Expected >= 3 hub nodes, got {count}"
 
 
@@ -280,6 +290,7 @@ class TestHubOperatorStatus:
 
     def test_hub_no_unavailable_operators(self):
         cos = hub_oc_json("get clusteroperators")
+        total = len(cos["items"])
         unavailable = [
             co["metadata"]["name"]
             for co in cos["items"]
@@ -288,6 +299,9 @@ class TestHubOperatorStatus:
             )
             != "True"
         ]
+        print(f"\nHub operators: {total} total, {total - len(unavailable)} available, {len(unavailable)} unavailable")
+        if unavailable:
+            print(f"  Unavailable: {unavailable}")
         assert not unavailable, f"Unavailable operators: {unavailable}"
 
     @pytest.mark.parametrize("operator", HUB_EXPECTED_OPERATORS)
@@ -346,12 +360,18 @@ class TestFleetClusterStatus:
         assert phase == "Running", f"MultiClusterHub phase: {phase}"
 
     def test_agentserviceconfig_exists(self):
-        hub_oc_json("get agentserviceconfig agent")
+        asc = hub_oc_json("get agentserviceconfig agent")
+        db_storage = asc.get("spec", {}).get("databaseStorage", {}).get("resources", {}).get("requests", {}).get("storage", "?")
+        fs_storage = asc.get("spec", {}).get("filesystemStorage", {}).get("resources", {}).get("requests", {}).get("storage", "?")
+        img_storage = asc.get("spec", {}).get("imageStorage", {}).get("resources", {}).get("requests", {}).get("storage", "?")
+        print(f"\nAgentServiceConfig: db={db_storage}  fs={fs_storage}  img={img_storage}")
 
     def test_managed_cluster_accepted(self, cluster):
         mc = hub_oc_json(f"get managedcluster {cluster}")
         conds = get_conditions_map(mc)
-        assert conds.get("HubAcceptedManagedCluster", {}).get("status") == "True", (
+        accepted = conds.get("HubAcceptedManagedCluster", {}).get("status", "?")
+        print(f"\n{cluster}: HubAcceptedManagedCluster={accepted}")
+        assert accepted == "True", (
             f"{cluster}: not accepted by hub"
         )
 
@@ -359,6 +379,7 @@ class TestFleetClusterStatus:
         mc = hub_oc_json(f"get managedcluster {cluster}")
         conds = get_conditions_map(mc)
         joined = conds.get("ManagedClusterJoined", {})
+        print(f"\n{cluster}: ManagedClusterJoined={joined.get('status', '?')}  msg={joined.get('message', '')[:80]}")
         assert joined.get("status") == "True", (
             f"{cluster}: not joined - {joined.get('message', '')}"
         )
@@ -367,6 +388,7 @@ class TestFleetClusterStatus:
         mc = hub_oc_json(f"get managedcluster {cluster}")
         conds = get_conditions_map(mc)
         avail = conds.get("ManagedClusterConditionAvailable", {})
+        print(f"\n{cluster}: ManagedClusterAvailable={avail.get('status', '?')}  msg={avail.get('message', '')[:80]}")
         assert avail.get("status") == "True", (
             f"{cluster}: not available - {avail.get('message', '')}"
         )
@@ -422,6 +444,8 @@ class TestSpokeAppStatus:
         except RuntimeError:
             pytest.skip(f"{cluster}: ArgoCD not installed (day-2 not run)")
         replicas = deploy["status"].get("availableReplicas", 0)
+        desired = deploy["spec"].get("replicas", 1)
+        print(f"\n{cluster} ArgoCD server: {replicas}/{desired} replicas available")
         assert replicas >= 1, f"{cluster}: ArgoCD has no available replicas"
 
     def test_spoke_all_apps_status_summary(self, cluster):
@@ -456,6 +480,8 @@ class TestSpokeAppStatus:
         except RuntimeError:
             pytest.skip(f"{cluster}: root-applications not found")
         sync = app.get("status", {}).get("sync", {}).get("status", "Unknown")
+        health = app.get("status", {}).get("health", {}).get("status", "Unknown")
+        print(f"\n{cluster} root-applications: sync={sync}  health={health}")
         assert sync in ("Synced", "OutOfSync"), (
             f"{cluster}: root-applications sync={sync}"
         )
@@ -470,8 +496,10 @@ class TestSpokeClusterHealth:
 
     def test_spoke_version_available(self, cluster):
         cv = spoke_oc_json(cluster, "get clusterversion version")
+        version = cv["status"]["desired"]["version"]
         conds = get_conditions_map(cv)
         avail = conds.get("Available", {})
+        print(f"\n{cluster} ClusterVersion: {version}  Available={avail.get('status', '?')}")
         assert avail.get("status") == "True", (
             f"{cluster}: ClusterVersion not available"
         )
@@ -508,8 +536,11 @@ class TestSpokeClusterHealth:
 
     def test_spoke_minimum_node_count(self, cluster):
         nodes = spoke_oc_json(cluster, "get nodes")
-        assert len(nodes["items"]) >= 3, (
-            f"{cluster}: expected >= 3 nodes, got {len(nodes['items'])}"
+        count = len(nodes["items"])
+        names = [n["metadata"]["name"] for n in nodes["items"]]
+        print(f"\n{cluster} node count: {count}  nodes: {names}")
+        assert count >= 3, (
+            f"{cluster}: expected >= 3 nodes, got {count}"
         )
 
 
@@ -548,6 +579,7 @@ class TestSpokeOperatorStatus:
 
     def test_spoke_no_unavailable_operators(self, cluster):
         cos = spoke_oc_json(cluster, "get clusteroperators")
+        total = len(cos["items"])
         unavailable = [
             co["metadata"]["name"]
             for co in cos["items"]
@@ -556,6 +588,9 @@ class TestSpokeOperatorStatus:
             )
             != "True"
         ]
+        print(f"\n{cluster} operators: {total} total, {total - len(unavailable)} available, {len(unavailable)} unavailable")
+        if unavailable:
+            print(f"  Unavailable: {unavailable}")
         assert not unavailable, f"{cluster}: unavailable operators: {unavailable}"
 
     @pytest.mark.parametrize("operator", SPOKE_EXPECTED_OPERATORS)
