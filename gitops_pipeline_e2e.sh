@@ -999,12 +999,77 @@ phase2_scale_down_external_dns() {
   fi
 }
 
+
+phase2_fix_ova_server_nfs() {
+  log_info "Fixing ova-server NFS DNS resolution (external-dns unavailable in libvirt env)"
+
+  local OVA_SVC_IP
+  OVA_SVC_IP=$(hub_oc "get svc nfs-service -n ova-server -o jsonpath={.status.loadBalancer.ingress[0].ip}" 2>/dev/null || echo "")
+  if [ -z "$OVA_SVC_IP" ]; then
+    log_info "ova-server nfs-service not found or no LoadBalancer IP yet -- skipping"
+    return 0
+  fi
+
+  local OVA_HOSTNAME="ova-server.vips.${LIBVIRT_NETWORK/ocp3m0w-/ocp3m0w-ic4s}.qe.lab.redhat.com"
+  OVA_HOSTNAME=$(hub_oc "get pv -o json" 2>/dev/null | python3 -c "
+import sys, json
+data = json.load(sys.stdin)
+for pv in data.get('items', []):
+    nfs = pv.get('spec', {}).get('nfs', {})
+    if '/ovas' in nfs.get('path', ''):
+        print(nfs.get('server', ''))
+        break
+" 2>/dev/null || echo "")
+
+  if [ -z "$OVA_HOSTNAME" ]; then
+    log_info "No PV with /ovas NFS path found -- skipping"
+    return 0
+  fi
+
+  log_info "ova-server LB IP: ${OVA_SVC_IP}, hostname: ${OVA_HOSTNAME}"
+
+  local EXISTING_DNS
+  EXISTING_DNS=$(ssh_hyp "virsh net-dumpxml ${LIBVIRT_NETWORK} 2>/dev/null | grep '${OVA_HOSTNAME}'" 2>/dev/null || echo "")
+  if [ -n "$EXISTING_DNS" ]; then
+    log_ok "ova-server DNS entry already in libvirt network -- skipping"
+  else
+    log_info "Adding ova-server DNS entry to libvirt network"
+    ssh_hyp "virsh net-update ${LIBVIRT_NETWORK} add-last dns-host '<host ip="${OVA_SVC_IP}"><hostname>${OVA_HOSTNAME}</hostname></host>' --live --config" 2>&1
+    log_ok "DNS entry added: ${OVA_HOSTNAME} -> ${OVA_SVC_IP}"
+  fi
+
+  local NFS_POD_READY
+  NFS_POD_READY=$(hub_oc "get pods -n ova-server --no-headers" 2>/dev/null | grep -c "Running" || echo "0")
+  if [ "$NFS_POD_READY" -gt 0 ] 2>/dev/null; then
+    local HAS_OVAS
+    HAS_OVAS=$(hub_oc "exec -n ova-server deployment/nfs-server -- ls -d /ovas" 2>/dev/null || echo "")
+    if [ -z "$HAS_OVAS" ]; then
+      log_info "Creating /ovas export in NFS server"
+      hub_oc 'exec -n ova-server deployment/nfs-server -- sh -c '"'"'mount -t tmpfs tmpfs /ovas 2>/dev/null; chmod 777 /ovas; echo "/ovas *(rw,fsid=1,insecure,no_root_squash)" >> /etc/exports; exportfs -ra 2>/dev/null || true'"'"''
+      
+      log_ok "/ovas NFS export created"
+    else
+      log_ok "/ovas already exists in NFS server"
+    fi
+  fi
+
+  local OVA_POD_STATUS
+  OVA_POD_STATUS=$(hub_oc "get pods -n openshift-mtv -l app=ova-server --no-headers" 2>/dev/null | grep -c "Running" || echo "0")
+  if [ "$OVA_POD_STATUS" -eq 0 ] 2>/dev/null; then
+    log_info "Restarting ova-server pod to retry NFS mount"
+    hub_oc "delete pod -n openshift-mtv -l app=ova-server --force --grace-period=0" 2>/dev/null || true
+  fi
+
+  log_ok "ova-server NFS fix applied"
+}
+
 phase2_hub_post_deploy_fixes() {
   log_info "=== Hub Post-Deployment Fixes ==="
   phase2_approve_hub_installplans
   phase2_install_minio_operator
   phase2_patch_forklift_crd
   phase2_scale_down_external_dns
+  phase2_fix_ova_server_nfs
 }
 
 phase4_create_spoke_prereq_namespaces() {
@@ -1375,6 +1440,10 @@ check_forklift_crd_patched() {
   echo "$result" | grep -q "boolean"
 }
 
+check_ova_server_nfs() {
+  hub_oc "get pods -n openshift-mtv -l app=ova-server --no-headers" 2>/dev/null | grep -q Running
+}
+
 check_spoke_prereq_namespaces() {
   for CLUSTER in $(get_deploy_clusters); do
     spoke_oc $CLUSTER "get namespace openshift-power-monitoring --no-headers" 2>/dev/null | grep -q . || return 1
@@ -1519,6 +1588,7 @@ case "$PHASE" in
     run_step "ForkliftController CRD" check_forklift_crd_patched phase2_patch_forklift_crd
     phase2_approve_hub_installplans
     phase2_scale_down_external_dns
+    run_step "ova-server NFS fix"     check_ova_server_nfs       phase2_fix_ova_server_nfs
     ;;
   spoke)
     run_step "Spoke provisioning"  check_spokes_installed     phase3_wait_spoke_provisioning
@@ -1554,6 +1624,7 @@ case "$PHASE" in
     run_step "ForkliftController CRD" check_forklift_crd_patched phase2_patch_forklift_crd
     phase2_approve_hub_installplans
     phase2_scale_down_external_dns
+    run_step "ova-server NFS fix"     check_ova_server_nfs       phase2_fix_ova_server_nfs
 
     # 2. VM infrastructure
     run_step "VM infrastructure"  check_vms_exist       phase1_create_vms
