@@ -1344,6 +1344,74 @@ phase5_tune_argocd_resources() {
   done
 }
 
+phase5_fix_metal3_image_customization() {
+  log_info "Fixing metal3-image-customization read-only filesystem (OCP 4.20.11+ known bug)"
+
+  for CLUSTER in $(get_deploy_clusters); do
+    local HAS_DEPLOY
+    HAS_DEPLOY=$(spoke_oc $CLUSTER "get deployment metal3-image-customization -n openshift-machine-api --no-headers" 2>/dev/null || echo "")
+    if [ -z "$HAS_DEPLOY" ]; then
+      log_ok "metal3-image-customization not present on $CLUSTER -- skipping"
+      continue
+    fi
+
+    local RUNNING
+    RUNNING=$(spoke_oc $CLUSTER "get pods -n openshift-machine-api -l k8s-app=metal3-image-customization --no-headers" 2>/dev/null | grep -c "Running" || echo "0")
+    if [ "$RUNNING" -gt 0 ]; then
+      log_ok "metal3-image-customization already running on $CLUSTER"
+      continue
+    fi
+
+    log_info "Patching metal3-image-customization deployment on $CLUSTER with writable /coreos overlay"
+    spoke_oc $CLUSTER "get deployment metal3-image-customization -n openshift-machine-api -o json" | python3 -c "
+import sys, json
+
+dep = json.load(sys.stdin)
+spec = dep['spec']['template']['spec']
+
+init_image = None
+for ic in spec.get('initContainers', []):
+    if ic['name'] == 'machine-os-images':
+        init_image = ic['image']
+        mounts = ic.get('volumeMounts', [])
+        if not any(m['mountPath'] == '/coreos' for m in mounts):
+            mounts.append({'name': 'coreos-rw', 'mountPath': '/coreos'})
+        if not any(m['mountPath'] == '/coreos.orig' for m in mounts):
+            mounts.append({'name': 'coreos-orig', 'mountPath': '/coreos.orig'})
+        ic['volumeMounts'] = mounts
+        ic['command'] = ['/bin/sh', '-c',
+            'cp -a /coreos.orig/* /coreos/ 2>/dev/null; exec /bin/copy-metal --all /shared/html/images']
+
+pre_init = {
+    'name': 'copy-coreos-files',
+    'image': init_image,
+    'command': ['/bin/sh', '-c', 'cp -a /coreos/* /coreos-orig/'],
+    'volumeMounts': [{'name': 'coreos-orig', 'mountPath': '/coreos-orig'}],
+    'resources': {'requests': {'cpu': '5m', 'memory': '50Mi'}},
+    'securityContext': {'privileged': True, 'capabilities': {'drop': ['ALL']}}
+}
+inits = spec.get('initContainers', [])
+if not any(ic['name'] == 'copy-coreos-files' for ic in inits):
+    inits.insert(0, pre_init)
+spec['initContainers'] = inits
+
+volumes = spec.get('volumes', [])
+if not any(v['name'] == 'coreos-rw' for v in volumes):
+    volumes.append({'name': 'coreos-rw', 'emptyDir': {}})
+if not any(v['name'] == 'coreos-orig' for v in volumes):
+    volumes.append({'name': 'coreos-orig', 'emptyDir': {}})
+spec['volumes'] = volumes
+
+json.dump(dep, sys.stdout)
+" | spoke_oc $CLUSTER "replace -f -" 2>&1 || true
+
+    sleep 30
+    spoke_oc $CLUSTER "delete pods -n openshift-machine-api -l k8s-app=metal3-image-customization --field-selector status.phase!=Running --force --grace-period=0" 2>/dev/null || true
+
+    log_ok "metal3-image-customization patched on $CLUSTER"
+  done
+}
+
 phase5_verify_spoke_apps() {
   log_info "Verifying spoke ArgoCD applications"
 
@@ -1447,6 +1515,12 @@ check_ova_server_nfs() {
 check_spoke_prereq_namespaces() {
   for CLUSTER in $(get_deploy_clusters); do
     spoke_oc $CLUSTER "get namespace openshift-power-monitoring --no-headers" 2>/dev/null | grep -q . || return 1
+  done
+}
+
+check_metal3_image_customization() {
+  for CLUSTER in $(get_deploy_clusters); do
+    spoke_oc $CLUSTER "get pods -n openshift-machine-api -l k8s-app=metal3-image-customization --no-headers" 2>/dev/null | grep -q Running || return 1
   done
 }
 
@@ -1563,6 +1637,7 @@ if [ "$DAY2_ONLY" = true ]; then
   phase5_approve_installplans
   phase5_cleanup_failed_pods
   phase5_tune_argocd_resources
+  run_step "metal3 image fix"  check_metal3_image_customization  phase5_fix_metal3_image_customization
   phase5_verify_spoke_apps
   log_ok "=== Day-2 operations complete ==="
   exit 0
@@ -1603,6 +1678,7 @@ case "$PHASE" in
     phase5_approve_installplans
     phase5_cleanup_failed_pods
     phase5_tune_argocd_resources
+    run_step "metal3 image fix"  check_metal3_image_customization  phase5_fix_metal3_image_customization
     phase5_verify_spoke_apps
     ;;
   all)
@@ -1644,6 +1720,7 @@ case "$PHASE" in
     phase5_approve_installplans
     phase5_cleanup_failed_pods
     phase5_tune_argocd_resources
+    run_step "metal3 image fix"  check_metal3_image_customization  phase5_fix_metal3_image_customization
     phase5_verify_spoke_apps
     ;;
   *)
