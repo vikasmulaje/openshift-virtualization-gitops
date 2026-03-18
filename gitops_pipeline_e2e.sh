@@ -1455,11 +1455,11 @@ init_network_profile
 
 DEPLOY_LIST=$(get_deploy_clusters)
 
-# etl4-only: 8 vCPUs + 32GB RAM; both clusters: 4 vCPUs + 24GB RAM (fit within 64 threads / 250GB)
+# etl4-only: 8 vCPUs + 48GB RAM; both clusters: 4 vCPUs + 24GB RAM (fit within 64 threads / 250GB)
 if [ "$CLUSTER_SCOPE" = "etl4" ]; then
   VM_VCPUS=8
-  VM_MEMORY_KB=33554432   # 32GB
-  VM_MEMORY_LABEL="32GB"
+  VM_MEMORY_KB=50331648   # 48GB
+  VM_MEMORY_LABEL="48GB"
 else
   VM_VCPUS=4
   VM_MEMORY_KB=25165824   # 24GB
