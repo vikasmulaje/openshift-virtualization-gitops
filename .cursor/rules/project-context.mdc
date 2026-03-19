@@ -1,0 +1,37 @@
+---
+description: OpenShift Virtualization GitOps project context and operational knowledge
+globs:
+alwaysApply: true
+---
+
+# Project Context
+
+This is an OpenShift Virtualization GitOps repository managing hub + spoke clusters via ArgoCD and ACM.
+
+## First Thing To Do
+
+Read `skills.md` at the repository root before doing any work. It contains:
+- Infrastructure access (hypervisor SSH, kubeconfig paths)
+- Current cluster state and known issues
+- Decision rules for common problems
+- Copy-paste commands for operations
+- Git workflow (two remotes: GitHub for manifests, GitLab for scripts)
+
+## Last Thing To Do
+
+Before ending any session where you made changes or discovered new information, **update `skills.md`**:
+- Update "Current Cluster State" section if cluster health changed
+- Add new issues to "Known Issues & Workarounds" if discovered
+- Add new operator versions to the version drift section if updated
+- Update "Remaining Work / Next Steps" if items were completed or new ones identified
+- Update the "Last updated" date at the top
+
+## Critical Rules
+
+1. **Two git remotes**: `origin` (GitHub) for cluster manifests read by ArgoCD. `gitlab` (GitLab) for e2e script + tests read by Jenkins. NEVER push `gitops_pipeline_e2e.sh` or `test_deployment.py` to GitHub.
+2. **Branch mapping**: `main` branch -> push to `origin/main`. `gitlab-push` branch -> push to `gitlab/main` with `git push gitlab gitlab-push:main`.
+3. **Dual fixes**: When fixing something on a live cluster, ALSO update the gitops repo YAML so ArgoCD doesn't revert the change.
+4. **Hypervisor access**: `ssh -o StrictHostKeyChecking=no root@cert-rhosp-01.lab.eng.rdu2.redhat.com`
+5. **Hub kubeconfig**: `/home/kni/clusterconfigs/auth/kubeconfig`
+6. **Spoke etl4 kubeconfig**: `/tmp/etl4-kubeconfig`
+7. **VM watchdog**: Use `i6300esb`, never `itco` (unsupported on QEMU).
