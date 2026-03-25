@@ -918,7 +918,7 @@ phase2_install_minio_operator() {
     120 10
 
   wait_for_condition "MinIO operator pod running" \
-    "hub_oc 'get pods -n minio-operator --no-headers 2>/dev/null' | grep -q Running" \
+    "hub_oc 'get pods -n minio-operator --no-headers' 2>/dev/null | grep -q Running" \
     120 10
 
   log_ok "MinIO Operator installed and running"
