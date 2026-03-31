@@ -942,7 +942,12 @@ phase2_patch_forklift_crd() {
     return 0
   fi
 
-  hub_oc "patch crd forkliftcontrollers.forklift.konveyor.io --type=json -p='[{"op":"add","path":"/spec/versions/0/schema/openAPIV3Schema/properties/spec/properties/olm_managed","value":{"type":"boolean","description":"Whether the operator is managed by OLM"}}]'"
+  local PATCH_JSON='[{"op":"add","path":"/spec/versions/0/schema/openAPIV3Schema/properties/spec/properties/olm_managed","value":{"type":"boolean","description":"Whether the operator is managed by OLM"}}]'
+  if [ "$RUN_LOCAL" = true ]; then
+    sudo env "PATH=$PATH" KUBECONFIG=${HUB_KUBECONFIG} oc patch crd forkliftcontrollers.forklift.konveyor.io --type=json -p="$PATCH_JSON"
+  else
+    ssh_hyp "export KUBECONFIG=${HUB_KUBECONFIG}; oc patch crd forkliftcontrollers.forklift.konveyor.io --type=json -p='$PATCH_JSON'"
+  fi
 
   log_ok "ForkliftController CRD patched"
 }
@@ -971,7 +976,7 @@ for item in data.get('items', []):
     local NS=$(echo $PLAN | cut -d/ -f1)
     local NAME=$(echo $PLAN | cut -d/ -f2)
     log_info "Approving InstallPlan $NAME in namespace $NS on hub"
-    hub_oc "patch installplan $NAME -n $NS --type merge -p '{"spec":{"approved":true}}'"
+    hub_oc "patch installplan $NAME -n $NS --type merge -p '{\"spec\":{\"approved\":true}}'"
   done
 
   log_ok "Hub InstallPlans approved"
