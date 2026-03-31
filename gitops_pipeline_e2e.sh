@@ -797,10 +797,10 @@ for app in data.get('items', []):
     log_warn "Found stale apps with unresolved template vars -- cleaning up"
     for APP in $STALE_APPS; do
       log_info "Deleting stale app: $APP"
-      hub_oc "patch applications.argoproj.io $APP -n openshift-gitops -p '{\"metadata\":{\"finalizers\":null}}' --type=merge" 2>/dev/null || true
+      hub_oc "patch applications.argoproj.io $APP -n openshift-gitops -p {\"metadata\":{\"finalizers\":null}} --type=merge" 2>/dev/null || true
       hub_oc "delete applications.argoproj.io $APP -n openshift-gitops --ignore-not-found" 2>/dev/null || true
     done
-    hub_oc "patch applications.argoproj.io root-applications -n openshift-gitops -p '{\"metadata\":{\"finalizers\":null}}' --type=merge" 2>/dev/null || true
+    hub_oc "patch applications.argoproj.io root-applications -n openshift-gitops -p {\"metadata\":{\"finalizers\":null}} --type=merge" 2>/dev/null || true
     hub_oc "delete applications.argoproj.io root-applications -n openshift-gitops --ignore-not-found" 2>/dev/null || true
     sleep 5
     log_ok "Stale apps cleaned up"
@@ -976,7 +976,7 @@ for item in data.get('items', []):
     local NS=$(echo $PLAN | cut -d/ -f1)
     local NAME=$(echo $PLAN | cut -d/ -f2)
     log_info "Approving InstallPlan $NAME in namespace $NS on hub"
-    hub_oc "patch installplan $NAME -n $NS --type merge -p '{\"spec\":{\"approved\":true}}'"
+    hub_oc "patch installplan $NAME -n $NS --type merge -p {\"spec\":{\"approved\":true}}"
   done
 
   log_ok "Hub InstallPlans approved"
@@ -1279,7 +1279,7 @@ for item in data.get('items', []):
           local NS=$(echo $PLAN | cut -d/ -f1)
           local NAME=$(echo $PLAN | cut -d/ -f2)
           log_info "Approving InstallPlan $NAME in namespace $NS on $CLUSTER"
-          spoke_oc $CLUSTER "patch installplan $NAME -n $NS --type merge -p '{\"spec\":{\"approved\":true}}'"
+          spoke_oc $CLUSTER "patch installplan $NAME -n $NS --type merge -p {\"spec\":{\"approved\":true}}"
           ANY_APPROVED=true
         done
       else
