@@ -1058,7 +1058,7 @@ for pv in data.get('items', []):
     log_ok "ova-server DNS entry already in libvirt network -- skipping"
   else
     log_info "Adding ova-server DNS entry to libvirt network"
-    ssh_hyp "virsh net-update ${LIBVIRT_NETWORK} add-last dns-host '<host ip="${OVA_SVC_IP}"><hostname>${OVA_HOSTNAME}</hostname></host>' --live --config" 2>&1
+    ssh_hyp "virsh net-update ${LIBVIRT_NETWORK} add-last dns-host '<host ip=\"${OVA_SVC_IP}\"><hostname>${OVA_HOSTNAME}</hostname></host>' --live --config" 2>&1
     log_ok "DNS entry added: ${OVA_HOSTNAME} -> ${OVA_SVC_IP}"
   fi
 
