@@ -796,6 +796,16 @@ phase2_configure_argocd() {
     "hub_oc 'rollout status deployment/openshift-gitops-repo-server -n openshift-gitops --timeout=10s'" \
     300
 
+  log_info "Flushing ArgoCD Redis cache to avoid stale CMP renders"
+  local REDIS_PASS
+  REDIS_PASS=$(hub_oc "get secret openshift-gitops-redis-initial-password -n openshift-gitops -o jsonpath={.data.admin\.password}" 2>/dev/null | base64 -d 2>/dev/null || echo "")
+  if [ -n "$REDIS_PASS" ]; then
+    hub_oc "exec deploy/openshift-gitops-redis -n openshift-gitops -- redis-cli -a $REDIS_PASS FLUSHALL" 2>/dev/null || true
+    log_ok "Redis cache flushed"
+  else
+    log_warn "Could not retrieve Redis password -- skipping cache flush"
+  fi
+
   log_ok "ArgoCD configured with CMP plugin and environment variables"
 }
 
