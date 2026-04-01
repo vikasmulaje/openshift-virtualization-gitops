@@ -91,12 +91,12 @@ init_network_profile() {
   case "${GITOPS_BRANCH}" in
     openshift-4.21)
       LIBVIRT_NETWORK="${LIBVIRT_NETWORK:-ocp3m0w-ic4s21}"
-      NETWORK_SUBNET="192.168.139"
+      NETWORK_SUBNET_FALLBACK="192.168.139"
       OCP_VERSION_IMAGE="${OCP_VERSION_IMAGE:-img4.21.2-x86-64-appsub}"
       ;;
     main|openshift-4.20)
       LIBVIRT_NETWORK="${LIBVIRT_NETWORK:-ocp3m0w-ic4s20}"
-      NETWORK_SUBNET="192.168.127"
+      NETWORK_SUBNET_FALLBACK="192.168.127"
       OCP_VERSION_IMAGE="${OCP_VERSION_IMAGE:-img4.20.14-x86-64-appsub}"
       ;;
     *)
@@ -104,6 +104,24 @@ init_network_profile() {
       exit 1
       ;;
   esac
+
+  # Auto-detect subnet from live libvirt network (first 3 octets of the IPv4 address)
+  local DETECTED_SUBNET=""
+  if [ "$RUN_LOCAL" = true ]; then
+    DETECTED_SUBNET=$(sudo virsh net-dumpxml "${LIBVIRT_NETWORK}" 2>/dev/null | grep -oP "address='\K[0-9]+\.[0-9]+\.[0-9]+" | head -1 || true)
+  else
+    DETECTED_SUBNET=$(ssh_hyp "virsh net-dumpxml ${LIBVIRT_NETWORK}" 2>/dev/null | grep -oP "address='\K[0-9]+\.[0-9]+\.[0-9]+" | head -1 || true)
+  fi
+
+  if [ -n "$DETECTED_SUBNET" ]; then
+    NETWORK_SUBNET="$DETECTED_SUBNET"
+    if [ "$DETECTED_SUBNET" != "$NETWORK_SUBNET_FALLBACK" ]; then
+      log_warn "Detected subnet ${DETECTED_SUBNET}.0/24 differs from hardcoded ${NETWORK_SUBNET_FALLBACK}.0/24 -- using detected"
+    fi
+  else
+    NETWORK_SUBNET="$NETWORK_SUBNET_FALLBACK"
+    log_warn "Could not detect subnet from libvirt network -- using fallback ${NETWORK_SUBNET}.0/24"
+  fi
 
   GATEWAY="${NETWORK_SUBNET}.1"
   DNS_SERVER="${NETWORK_SUBNET}.1"
