@@ -1069,7 +1069,11 @@ for pv in data.get('items', []):
     HAS_OVAS=$(hub_oc "exec -n ova-server deployment/nfs-server -- ls -d /ovas" 2>/dev/null || echo "")
     if [ -z "$HAS_OVAS" ]; then
       log_info "Creating /ovas export in NFS server"
-      hub_oc 'exec -n ova-server deployment/nfs-server -- sh -c '"'"'mount -t tmpfs tmpfs /ovas 2>/dev/null; chmod 777 /ovas; echo "/ovas *(rw,fsid=1,insecure,no_root_squash)" >> /etc/exports; exportfs -ra 2>/dev/null || true'"'"''
+      if [ "$RUN_LOCAL" = true ]; then
+        sudo env "PATH=$PATH" KUBECONFIG=${HUB_KUBECONFIG} oc exec -n ova-server deployment/nfs-server -- sh -c 'mount -t tmpfs tmpfs /ovas 2>/dev/null; chmod 777 /ovas; echo "/ovas *(rw,fsid=1,insecure,no_root_squash)" >> /etc/exports; exportfs -ra 2>/dev/null || true'
+      else
+        ssh_hyp "export KUBECONFIG=${HUB_KUBECONFIG}; oc exec -n ova-server deployment/nfs-server -- sh -c 'mount -t tmpfs tmpfs /ovas 2>/dev/null; chmod 777 /ovas; echo \"/ovas *(rw,fsid=1,insecure,no_root_squash)\" >> /etc/exports; exportfs -ra 2>/dev/null || true'"
+      fi
       
       log_ok "/ovas NFS export created"
     else
