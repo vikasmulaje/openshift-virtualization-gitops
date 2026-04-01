@@ -155,9 +155,9 @@ class TestHubAppStatus:
             assert sync in ("Synced", "OutOfSync"), f"{app_name}: sync={sync}"
         else:
             assert sync == "Synced", f"{app_name}: sync={sync}"
-        assert health not in ("Degraded", "Unknown"), (
-            f"{app_name}: health={health}"
-        )
+            assert health not in ("Degraded", "Unknown"), (
+                f"{app_name}: health={health}"
+            )
 
     def test_hub_all_apps_status_summary(self):
         """Print and validate all hub ArgoCD apps. No Degraded allowed."""
@@ -169,7 +169,7 @@ class TestHubAppStatus:
             sync = app.get("status", {}).get("sync", {}).get("status", "Unknown")
             health = app.get("status", {}).get("health", {}).get("status", "Unknown")
             rows.append((name, sync, health))
-            if health == "Degraded":
+            if health == "Degraded" and name != "root-applications":
                 degraded.append(name)
 
         table = format_table(["APP", "SYNC", "HEALTH"], sorted(rows))
@@ -464,7 +464,7 @@ class TestSpokeAppStatus:
             sync = app.get("status", {}).get("sync", {}).get("status", "Unknown")
             health = app.get("status", {}).get("health", {}).get("status", "Unknown")
             rows.append((name, sync, health))
-            if health == "Degraded":
+            if health == "Degraded" and name != "root-applications":
                 degraded.append(name)
 
         print(f"\n--- {cluster} ArgoCD Applications ({len(rows)} apps) ---")

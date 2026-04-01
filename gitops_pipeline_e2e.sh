@@ -1805,7 +1805,7 @@ phase6_run_tests() {
   HUB_KUBECONFIG="${HUB_KUBECONFIG}" \
   SPOKE_CLUSTERS="${CLUSTERS_CSV}" \
   SPOKE_KUBECONFIG_DIR="/tmp" \
-  EXPECTED_OCP_VERSION="${OCP_VERSION_IMAGE%%.*}.${OCP_VERSION_IMAGE#*.}" \
+  EXPECTED_OCP_VERSION="$(v=${OCP_VERSION_IMAGE#img}; v=${v%%-*}; echo ${v%.*})" \
   python3 -m pytest "${TEST_FILE}" \
     -v \
     --tb=short \
