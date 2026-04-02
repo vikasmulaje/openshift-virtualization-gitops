@@ -30,3 +30,4 @@ spec:
     sourceNamespace: openshift-marketplace
   versions:
     - mtv-operator.v2.10.5
+    - mtv-operator.v2.10.6
