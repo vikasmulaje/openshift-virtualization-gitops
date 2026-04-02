@@ -10,3 +10,14 @@ DEPLOYMENT-CHANGES.md
 gitops_pipeline_e2e.sh
 skills.md
 .cursor/
+
+# TLV2 lab secrets - never commit
+clusters/hub/overlays/cluster-ocp-edge1/pull-secret.yaml
+clusters/hub/overlays/cluster-ocp-edge1/bmc-credentials.yaml
+clusters/hub/overlays/cluster-ocp-edge1-cl2/pull-secret.yaml
+clusters/hub/overlays/cluster-ocp-edge1-cl2/bmc-credentials.yaml
+
+# Generic secret patterns
+**/pull-secret.yaml
+**/bmc-credentials.yaml
+**/bmc-credentials-secret.yaml
