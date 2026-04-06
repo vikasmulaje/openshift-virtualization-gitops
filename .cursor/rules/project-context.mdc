@@ -1,6 +1,5 @@
 ---
 description: OpenShift Virtualization GitOps project context and operational knowledge
-globs:
 alwaysApply: true
 ---
 
@@ -11,27 +10,57 @@ This is an OpenShift Virtualization GitOps repository managing hub + spoke clust
 ## First Thing To Do
 
 Read `skills.md` at the repository root before doing any work. It contains:
+
 - Infrastructure access (hypervisor SSH, kubeconfig paths)
 - Current cluster state and known issues
 - Decision rules for common problems
 - Copy-paste commands for operations
-- Git workflow (two remotes: GitHub for manifests, GitLab for scripts)
+- Git workflow notes
 
 ## Last Thing To Do
 
 Before ending any session where you made changes or discovered new information, **update `skills.md`**:
-- Update "Current Cluster State" section if cluster health changed
-- Add new issues to "Known Issues & Workarounds" if discovered
-- Add new operator versions to the version drift section if updated
+
+- Update "Current Cluster State" if cluster health changed
+- Add new issues to "Known Issues & Workarounds"
+- Add new operator CSV versions if OperatorPolicy drift caused NonCompliant
 - Update "Remaining Work / Next Steps" if items were completed or new ones identified
 - Update the "Last updated" date at the top
 
-## Critical Rules
+## Git, Remotes, and Secrets
 
-1. **Two git remotes**: `origin` (GitHub) for cluster manifests read by ArgoCD. `gitlab` (GitLab) for e2e script + tests read by Jenkins. NEVER push `gitops_pipeline_e2e.sh` or `test_deployment.py` to GitHub.
-2. **Branch mapping**: `main` branch -> push to `origin/main`. `gitlab-push` branch -> push to `gitlab/main` with `git push gitlab gitlab-push:main`.
-3. **Dual fixes**: When fixing something on a live cluster, ALSO update the gitops repo YAML so ArgoCD doesn't revert the change.
-4. **Hypervisor access**: `ssh -o StrictHostKeyChecking=no root@cert-rhosp-01.lab.eng.rdu2.redhat.com`
-5. **Hub kubeconfig**: `/home/kni/clusterconfigs/auth/kubeconfig`
-6. **Spoke etl4 kubeconfig**: `/tmp/etl4-kubeconfig`
-7. **VM watchdog**: Use `i6300esb`, never `itco` (unsupported on QEMU).
+1. **Primary remote for this effort**: GitLab — `certification-qe/openshift-virtualization-gitops` on `gitlab.cee.redhat.com`. ArgoCD apps, `AppProject` `sourceRepos`, and the `openshift-gitops` ConfigMap **`environment-variables`** key **`INFRA_GITOPS_REPO`** must all point at the **same** Git URL. Stale URLs (e.g. old GitHub) cause `InvalidSpecError` / `Repository not found` / endless sync loops.
+2. **Never commit secrets**: pull secrets, BMC credentials, kubeconfigs, tokens. Use `oc create secret …` and document in overlay `kustomization.yaml` comments only. `.gitignore` includes patterns for common secret filenames.
+3. **Dual fix for live clusters**: If you patch the cluster (ArgoCD CM, AppProject, Applications), **also** commit the equivalent change to Git so the next sync does not fight manual patches.
+4. **Branching**: `tlv2-lab` is used for TLV bare-metal spoke overlays; `main` is the default integration branch. Match the branch to what ArgoCD `targetRevision` / cluster-versions replacement expects.
+5. **Jenkins / script pushes**: Prefer **`git push gitlab …`** for CI-related files when team policy is GitLab-only. Example pattern used historically: `git push gitlab <local-branch>:main` for e2e assets — confirm current branch protection and MR workflow in `skills.md`.
+
+## ArgoCD + CMP (envsubst)
+
+- Child apps and `AppProject` are rendered with **`INFRA_GITOPS_REPO`** via the repo-server **CMP** (`kustomize … | envsub`). **`envFrom` on the repo-server pod reads `environment-variables` at pod start** — after changing that ConfigMap, **restart** `openshift-gitops-repo-server` (and if manifests were badly cached, restart **Redis** and the **application-controller**) so new renders are not stale.
+- If `cluster-config` rejects the repo URL, patch **`AppProject/cluster-config`** `spec.sourceRepos` to match GitLab; then refresh `root-applications` and children.
+
+## ACM / OperatorPolicy
+
+- **NonCompliant** often means the installed **CSV** is not in the policy **`spec.versions`** list. Add the exact CSV string from `oc get csv -n <ns>` (OCP minor version bumps change the build suffix).
+
+## Environments (reference)
+
+### RDU2 / libvirt-style lab (historical defaults in repo)
+
+- **Hypervisor**: `ssh -o StrictHostKeyChecking=no root@cert-rhosp-01.lab.eng.rdu2.redhat.com`
+- **Hub kubeconfig (on hypervisor)**: `/home/kni/clusterconfigs/auth/kubeconfig`
+- **Spoke etl4 kubeconfig (example path)**: `/tmp/etl4-kubeconfig`
+- **VM watchdog**: use **`i6300esb`**, not **`itco`** (QEMU).
+
+### TLV2 lab — hub `ocp-edge1-cl3` (4.21) + bare-metal spoke `ocp-edge1`
+
+- **Hub console/API**: `*.ocp-edge1-cl3.lab.eng.tlv2.redhat.com` (see cluster docs / `skills.md`).
+- **Kubeconfig**: stored locally by operators (e.g. `~/Downloads/kubeconfig-tlv`) — **never commit**.
+- **Spoke namespace**: `ocp-edge1`. **BMH**: `x240m5-11`, `x240m5-12`, `x240m5-13`; **BMC IPs**: `10.46.61.30`, `.31`, `.32` respectively.
+- **Hostname mapping**: **`openshift-worker-1.ocp-edge1…` ↔ `x240m5-11` / BMC `.30`** (confirm in `oc get agent` / BMH if labels change).
+- **Assisted / Agent stuck on reboot**: message often says boot **install disk** (`sda` / WWN) **and** reach **cluster API**. **iLO 5**: `PATCH` boot on `/redfish/v1/Systems/1` may return **`UnsupportedOperation`**; **`POST`** `…/Actions/Oem/Hpe/HpeComputerSystemExt.SystemReset` with **`{"ResetType":"ColdBoot"}`** usually works. **`PowerCycle`** is often **not** supported on standard `ComputerSystem.Reset` — use **`ForceRestart`** / **`ColdBoot`** as documented by iLO. If HDD boot is already forced but the agent still times out, suspect **host networking to API VIP** (NMState, VLAN, routing), not only BMC boot order.
+
+## Jenkins / E2E
+
+- Do **not** push **`gitops_pipeline_e2e.sh`** or **`test_deployment.py`** to a public GitHub fork if policy says GitLab-only for those artifacts; follow `skills.md` and team convention for which remote receives CI scripts.
