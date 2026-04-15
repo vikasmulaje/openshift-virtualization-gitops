@@ -6,3 +6,24 @@ clusters/hub/overlays/cluster-etl4/bmc-credentials-secret.yaml
 clusters/hub/overlays/cluster-etl4/pull-secret.yaml
 components/mtv-configuration/vddk
 deployment_clone_cluster.md
+DEPLOYMENT-CHANGES.md
+gitops_pipeline_e2e.sh
+gitops_pipeline_multicluster-e2e.sh
+skills.md
+.cursor/
+
+# TLV2 lab secrets - never commit
+clusters/hub/overlays/cluster-ocp-edge1/pull-secret.yaml
+clusters/hub/overlays/cluster-ocp-edge1/bmc-credentials.yaml
+clusters/hub/overlays/cluster-ocp-edge1-cl2/pull-secret.yaml
+clusters/hub/overlays/cluster-ocp-edge1-cl2/bmc-credentials.yaml
+
+# Generic secret patterns
+**/pull-secret.yaml
+**/bmc-credentials.yaml
+**/bmc-credentials-secret.yaml
+
+# Secrets with embedded credentials
+components/aap-configuration/aap-hub-s3-secret.yaml
+components/acm-observability/storage-secret.yaml
+components/external-dns-configuration/rfc2136-tsig-secret.yaml
