@@ -4,7 +4,7 @@ metadata:
   name: cluster-versions
   namespace: openshift-gitops
 data:
-  hub: openshift-4.21
-  etl4: openshift-4.21
-  etl6: openshift-4.21
-  spoke1: openshift-4.21
+  hub: openshift-4.22
+  etl4: openshift-4.22
+  etl6: openshift-4.22
+  spoke1: openshift-4.22

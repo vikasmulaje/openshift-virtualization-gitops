@@ -24,7 +24,7 @@ Once you have performed the above customization you can run the following:
 
 ```sh
 export gitops_repo=https://github.com/redhat-developer/openshift-virtualization-gitops.git #<your newly created repo>
-export gitops_branch=${GITOPS_BRANCH:-openshift-4.21} #<the branch matching your target OCP version>
+export gitops_branch=${GITOPS_BRANCH:-openshift-4.22} #<the branch matching your target OCP version>
 export cluster_name=hub #<your hub cluster name, typically "hub">
 export cluster_base_domain=$(oc get ingress.config.openshift.io cluster --template={{.spec.domain}} | sed -e "s/^apps.//")
 export platform_base_domain=${cluster_base_domain#*.}

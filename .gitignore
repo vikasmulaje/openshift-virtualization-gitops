@@ -27,3 +27,4 @@ clusters/hub/overlays/cluster-ocp-edge1-cl2/bmc-credentials.yaml
 components/aap-configuration/aap-hub-s3-secret.yaml
 components/acm-observability/storage-secret.yaml
 components/external-dns-configuration/rfc2136-tsig-secret.yaml
+gitops-e2e-test.html

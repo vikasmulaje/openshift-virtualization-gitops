@@ -5,7 +5,7 @@ metadata:
   annotations:
     argocd.argoproj.io/sync-options: Delete=false,ServerSideApply=true  
 spec:
-  channel: stable-4.21
+  channel: stable-4.22
   desiredUpdate:
-    version: 4.21.2
-    image: "quay.io/openshift-release-dev/ocp-release@sha256:ed3b2be8d2673f8669ba2a6d4951011b9b4d52eb4a28eb46ed87c05d175cc196"
+    version: 4.22.0-0.nightly-2026-04-13-230307
+    image: "registry.ci.openshift.org/ocp/release@sha256:18f0a3628337b939328404158000cd75774696014aacf6040b9ad0874843a98b"
