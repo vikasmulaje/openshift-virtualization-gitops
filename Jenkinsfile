@@ -112,6 +112,7 @@ pipeline {
                     
                     ./gitops_pipeline_e2e.sh \\
                         --local \\
+                        --branch ${params.GITOPS_BRANCH} \\
                         --host ${params.HOST} \\
                         --network ${params.LIBVIRT_NETWORK} \\
                         --clusters ${params.CLUSTERS} \\
