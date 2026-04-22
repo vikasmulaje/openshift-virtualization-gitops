@@ -1447,6 +1447,7 @@ run_step() {
 PHASE="all"
 DO_CLEANUP=false
 DAY2_ONLY=false
+RUN_TESTS=false
 
 while [[ $# -gt 0 ]]; do
   case $1 in
@@ -1458,6 +1459,8 @@ while [[ $# -gt 0 ]]; do
     --network)   LIBVIRT_NETWORK="$2"; shift 2 ;;
     --ocp-image) OCP_VERSION_IMAGE="$2"; shift 2 ;;
     --subnet)    NETWORK_SUBNET_FALLBACK="$2"; shift 2 ;;
+    --host)      HYPERVISOR="$2"; shift 2 ;;
+    --test)      RUN_TESTS=true; shift ;;
     --local)     RUN_LOCAL=true; shift ;;
     --help|-h)
       echo "Usage: $0 [OPTIONS]"
@@ -1476,8 +1479,10 @@ while [[ $# -gt 0 ]]; do
       echo "  --network <NAME>         Libvirt network name (auto-set for known branches)"
       echo "  --ocp-image <NAME>       ClusterImageSet name (auto-set for known branches)"
       echo "  --subnet <PREFIX>        Network subnet prefix, e.g. 192.168.134 (auto-detected)"
+      echo "  --host <FQDN>            Hypervisor hostname (default: cert-rhosp-01.lab.eng.rdu2.redhat.com)"
       echo "  --cleanup                Destroy existing VMs before creating new ones"
       echo "  --day2-only              Extract kubeconfigs + all day-2 steps"
+      echo "  --test                   Run post-deployment validation tests"
       echo "  --local                  Run directly on the hypervisor (no SSH)"
       echo "  --help                   Show this help message"
       echo ""
@@ -1534,6 +1539,7 @@ echo "  Clusters:   ${DEPLOY_LIST}"
 echo "  VM Spec:    ${VM_VCPUS} vCPUs, ${VM_MEMORY_LABEL} RAM"
 echo "  Phase:      ${PHASE}"
 echo "  Cleanup:    ${DO_CLEANUP}"
+echo "  Tests:      ${RUN_TESTS}"
 echo "  Mode:       ${RUN_MODE}"
 echo "=============================================="
 echo ""
