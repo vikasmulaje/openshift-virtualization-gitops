@@ -191,7 +191,7 @@ run_cmd() {
     if [ "$(id -u)" -eq 0 ]; then
       bash -c "$*"
     else
-      sudo bash -c "$*"
+      sudo -E PATH="$PATH" bash -c "$*"
     fi
   else
     ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 ${HYPERVISOR_USER}@${HYPERVISOR} "$@"
