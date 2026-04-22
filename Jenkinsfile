@@ -123,8 +123,12 @@ pipeline {
             }
         }
     }
-
-post {
+    post {
+        failure {
+            script {
+                runAiFailureAnalysis()
+            }
+        }
         always {
             script {
                 sh 'cp /tmp/deployment-reports/gitops-e2e-test.html ./gitops-e2e-test.html || echo "WARNING: Test report not found in /tmp/deployment-reports/"'
