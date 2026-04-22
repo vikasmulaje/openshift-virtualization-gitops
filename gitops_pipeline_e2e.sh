@@ -188,7 +188,11 @@ get_deploy_clusters() {
 
 run_cmd() {
   if [ "$RUN_LOCAL" = true ]; then
-    bash -c "$*"
+    if [ "$(id -u)" -eq 0 ]; then
+      bash -c "$*"
+    else
+      sudo bash -c "$*"
+    fi
   else
     ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 ${HYPERVISOR_USER}@${HYPERVISOR} "$@"
   fi
@@ -196,6 +200,14 @@ run_cmd() {
 
 ssh_hyp() {
   run_cmd "$@"
+}
+
+local_sudo() {
+  if [ "$RUN_LOCAL" = true ] && [ "$(id -u)" -ne 0 ]; then
+    sudo "$@"
+  else
+    "$@"
+  fi
 }
 
 hub_oc() {
@@ -287,7 +299,7 @@ preflight_checks() {
     log_ok "Hub cluster reachable ($NODE_COUNT nodes Ready)"
   fi
 
-  if ! virsh net-info "${LIBVIRT_NETWORK}" &>/dev/null; then
+  if ! local_sudo virsh net-info "${LIBVIRT_NETWORK}" &>/dev/null; then
     log_error "Libvirt network not found: ${LIBVIRT_NETWORK}"
     FAIL=true
   else
