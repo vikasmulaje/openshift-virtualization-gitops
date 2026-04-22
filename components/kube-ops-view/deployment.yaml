@@ -21,7 +21,7 @@ spec:
       containers:
       - name: service
         # see https://github.com/hjacobs/kube-ops-view/releases
-        image: hjacobs/kube-ops-view:23.5.0
+        image: docker.io/hjacobs/kube-ops-view@sha256:a4fae38f93d7e0475b2bcef28c72a65d39d824daed22b26c4cef0a6da89aac7e
         args:
         # remove this option to use built-in memory store
         - --redis-url=redis://kube-ops-view-redis:6379

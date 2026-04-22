@@ -4,6 +4,7 @@ metadata:
   name: v2v-vmware
   namespace: openshift-cnv
 data:
-        # Replace registry:5000 with the registry containing your privately-built VDDK image,
-        # and replace vddk-init:latest with your image's name and tag.
+        # Replace with your mirrored VDDK image digest.
+        # Original: quay.io/raffaelespazzoli/vddk:v8.0.3 (private repo)
+        # To get digest: skopeo inspect --no-tags docker://quay.io/raffaelespazzoli/vddk:v8.0.3 | jq .Digest
         vddk-init-image: quay.io/raffaelespazzoli/vddk:v8.0.3
