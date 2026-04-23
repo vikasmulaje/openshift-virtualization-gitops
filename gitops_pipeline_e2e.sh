@@ -1164,7 +1164,8 @@ phase3_extract_kubeconfigs() {
   log_info "Extracting spoke kubeconfigs"
 
   for CLUSTER in $(get_deploy_clusters); do
-    hub_oc "get secret ${CLUSTER}-admin-kubeconfig -n ${CLUSTER} -o jsonpath={.data.kubeconfig}" | base64 -d > /tmp/${CLUSTER}-kubeconfig
+    hub_oc "get secret ${CLUSTER}-admin-kubeconfig -n ${CLUSTER} -o jsonpath={.data.kubeconfig}" | base64 -d | sudo tee /tmp/${CLUSTER}-kubeconfig > /dev/null
+    sudo chmod 644 /tmp/${CLUSTER}-kubeconfig
     log_ok "Kubeconfig for $CLUSTER saved to /tmp/${CLUSTER}-kubeconfig"
   done
 }
