@@ -112,6 +112,7 @@ pipeline {
                     
                     ./gitops_pipeline_e2e.sh \\
                         --local \\
+                        --branch ${params.GITOPS_BRANCH} \\
                         --host ${params.HOST} \\
                         --network ${params.LIBVIRT_NETWORK} \\
                         --clusters ${params.CLUSTERS} \\
@@ -154,14 +155,14 @@ post {
                                "Status: *${buildStatus}*\n" +
                                "Build URL: ${env.BUILD_URL}\n" +
                                "<${htmlReportUrl}|HTML Test Report Build here>"
-                
+
                 // Send Slack message
                 slackSend(
                     channel: params.SLACK_CHANNEL,
                     color: buildColor,
                     message: slackMsg,
                     teamDomain: 'redhat-internal',
-                    tokenCredentialId: 'assisted-slack-bot-token-new'
+                    tokenCredentialId: 'assisted-core-slack-bot'
                 )
             }
         }
