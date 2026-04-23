@@ -498,12 +498,18 @@ phase1_create_vms() {
 phase1_setup_dns() {
   log_info "=== Setting up DNS entries for spoke clusters ==="
 
-  # 1. Add /etc/hosts entries on hypervisor
+  # 1. Add/update /etc/hosts entries on hypervisor
   log_info "Adding /etc/hosts entries"
   for CLUSTER in $(get_deploy_clusters); do
     local API_VIP_VAR="${CLUSTER^^}_API_VIP"
+    local INGRESS_VIP_VAR="${CLUSTER^^}_INGRESS_VIP"
     local BASE_DOMAIN_VAR="${CLUSTER^^}_BASE_DOMAIN"
-    ssh_hyp "grep -q 'api.${!BASE_DOMAIN_VAR}' /etc/hosts || echo '${!API_VIP_VAR} api.${!BASE_DOMAIN_VAR}' >> /etc/hosts"
+    ssh_hyp "
+      sed -i '/api\.${!BASE_DOMAIN_VAR}/d' /etc/hosts
+      sed -i '/apps\.${!BASE_DOMAIN_VAR}/d' /etc/hosts
+      echo '${!API_VIP_VAR} api.${!BASE_DOMAIN_VAR} api-int.${!BASE_DOMAIN_VAR}' >> /etc/hosts
+      echo '${!INGRESS_VIP_VAR} apps.${!BASE_DOMAIN_VAR}' >> /etc/hosts
+    "
   done
 
   # 2. Check if libvirt network already has the DNS entries
