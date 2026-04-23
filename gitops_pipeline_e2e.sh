@@ -94,16 +94,19 @@ init_network_profile() {
       LIBVIRT_NETWORK="${LIBVIRT_NETWORK:-ocp3m0w-ic4n22}"
       NETWORK_SUBNET_FALLBACK="${NETWORK_SUBNET_FALLBACK:-192.168.134}"
       OCP_VERSION_IMAGE="${OCP_VERSION_IMAGE:-img4.22.0-0.nightly-2026-04-13-230307-x86-64-appsub}"
+      EXPECTED_OCP_VERSION="${EXPECTED_OCP_VERSION:-4.22}"
       ;;
     openshift-4.21)
       LIBVIRT_NETWORK="${LIBVIRT_NETWORK:-ocp3m0w-ic4s21}"
       NETWORK_SUBNET_FALLBACK="${NETWORK_SUBNET_FALLBACK:-192.168.139}"
       OCP_VERSION_IMAGE="${OCP_VERSION_IMAGE:-img4.21.2-x86-64-appsub}"
+      EXPECTED_OCP_VERSION="${EXPECTED_OCP_VERSION:-4.21}"
       ;;
     main|openshift-4.20)
       LIBVIRT_NETWORK="${LIBVIRT_NETWORK:-ocp3m0w-ic4s20}"
       NETWORK_SUBNET_FALLBACK="${NETWORK_SUBNET_FALLBACK:-192.168.135}"
       OCP_VERSION_IMAGE="${OCP_VERSION_IMAGE:-img4.20.14-x86-64-appsub}"
+      EXPECTED_OCP_VERSION="${EXPECTED_OCP_VERSION:-4.20}"
       ;;
     *)
       if [ -z "${LIBVIRT_NETWORK:-}" ] || [ -z "${OCP_VERSION_IMAGE:-}" ]; then
@@ -113,6 +116,7 @@ init_network_profile() {
         exit 1
       fi
       NETWORK_SUBNET_FALLBACK="${NETWORK_SUBNET_FALLBACK:-}"
+      EXPECTED_OCP_VERSION="${EXPECTED_OCP_VERSION:-4.20}"
       log_info "Using custom branch '${GITOPS_BRANCH}' with network=${LIBVIRT_NETWORK}, image=${OCP_VERSION_IMAGE}"
       ;;
   esac
@@ -1463,6 +1467,71 @@ run_step() {
   fi
 }
 
+# ========================= PHASE 6: POST-DEPLOYMENT TESTS ================
+
+phase6_run_tests() {
+  if [ "$RUN_TESTS" != true ]; then
+    return 0
+  fi
+
+  log_info "=== Running post-deployment validation tests ==="
+
+  local REPORT_DIR="/tmp/deployment-reports"
+  local REPORT_FILE="${REPORT_DIR}/gitops-e2e-test.html"
+  local TEST_SCRIPT="${GITOPS_DIR}/test_deployment.py"
+
+  local test_cmd="
+    mkdir -p ${REPORT_DIR}
+
+    if ! command -v pytest &>/dev/null; then
+      echo 'Installing pytest and pytest-html...'
+      pip3 install --quiet pytest pytest-html 2>/dev/null || pip install --quiet pytest pytest-html
+    fi
+
+    if ! python3 -c 'import pytest_html' 2>/dev/null; then
+      pip3 install --quiet pytest-html 2>/dev/null || pip install --quiet pytest-html
+    fi
+
+    if [ ! -f '${TEST_SCRIPT}' ]; then
+      echo 'ERROR: test_deployment.py not found at ${TEST_SCRIPT}'
+      exit 1
+    fi
+
+    export HUB_KUBECONFIG='${HUB_KUBECONFIG}'
+    export SPOKE_CLUSTERS='$(echo $(get_deploy_clusters) | tr ' ' ',')'
+    export SPOKE_KUBECONFIG_DIR='/tmp'
+    export EXPECTED_OCP_VERSION='${EXPECTED_OCP_VERSION}'
+
+    cd ${GITOPS_DIR}
+    pytest test_deployment.py \
+      -v \
+      --html='${REPORT_FILE}' \
+      --self-contained-html \
+      --tb=short \
+      || true
+  "
+
+  if [ "$RUN_LOCAL" = true ]; then
+    eval "$test_cmd"
+  else
+    ssh_hyp "$test_cmd"
+  fi
+
+  if [ "$RUN_LOCAL" = true ]; then
+    if [ -f "$REPORT_FILE" ]; then
+      log_ok "Test report generated: ${REPORT_FILE}"
+    else
+      log_warn "Test report not found at ${REPORT_FILE}"
+    fi
+  else
+    if ssh_hyp "test -f ${REPORT_FILE}" 2>/dev/null; then
+      log_ok "Test report generated on hypervisor: ${REPORT_FILE}"
+    else
+      log_warn "Test report not found at ${REPORT_FILE}"
+    fi
+  fi
+}
+
 # ========================= MAIN EXECUTION =================================
 
 PHASE="all"
@@ -1577,6 +1646,7 @@ if [ "$DAY2_ONLY" = true ]; then
   phase5_cleanup_failed_pods
   phase5_tune_argocd_resources
   phase5_verify_spoke_apps
+  phase6_run_tests
   log_ok "=== Day-2 operations complete ==="
   exit 0
 fi
@@ -1604,6 +1674,7 @@ case "$PHASE" in
     phase3_nightly_apply_mc_and_recover
     phase3_nightly_monitor_mco_reboots
     phase3_verify_spokes
+    phase6_run_tests
     ;;
   day2)
     run_step "Spoke kubeconfigs"       check_spoke_kubeconfigs    phase3_extract_kubeconfigs
@@ -1613,6 +1684,7 @@ case "$PHASE" in
     phase5_cleanup_failed_pods
     phase5_tune_argocd_resources
     phase5_verify_spoke_apps
+    phase6_run_tests
     ;;
   all)
     if [ "$DO_CLEANUP" = true ]; then cleanup_vms; fi
@@ -1648,6 +1720,9 @@ case "$PHASE" in
     phase5_cleanup_failed_pods
     phase5_tune_argocd_resources
     phase5_verify_spoke_apps
+
+    # 5. Post-deployment validation tests
+    phase6_run_tests
     ;;
   *)
     echo "Usage: $0 [--clusters <etl4|both>] [--phase <infra|hub|spoke|day2|all>] [--cleanup] [--day2-only]"
