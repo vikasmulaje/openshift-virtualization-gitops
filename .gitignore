@@ -27,4 +27,5 @@ components/acm-observability/storage-secret.yaml
 components/external-dns-configuration/rfc2136-tsig-secret.yaml
 
 # E2E scripts (contain credentials)
+gitops_pipeline_e2e.sh
 gitops_pipeline_multicluster-e2e.sh
