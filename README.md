@@ -27,6 +27,7 @@ export gitops_repo=https://github.com/redhat-developer/openshift-virtualization-
 export cluster_name=hub #<your hub cluster name, typically "hub">
 export cluster_base_domain=$(oc get ingress.config.openshift.io cluster --template={{.spec.domain}} | sed -e "s/^apps.//")
 export platform_base_domain=${cluster_base_domain#*.}
+export network_subnet=192.168.x  #<first 3 octets of your libvirt network subnet, e.g. 192.168.133>
 oc apply -f .bootstrap/subscription.yaml
 oc apply -f .bootstrap/cluster-rolebinding.yaml
 sleep 60

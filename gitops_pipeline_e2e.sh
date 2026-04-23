@@ -759,6 +759,7 @@ phase2_configure_argocd() {
     export gitops_repo='${GITOPS_REPO}'
     export gitops_branch='${GITOPS_BRANCH}'
     export cluster_name='hub'
+    export network_subnet='${NETWORK_SUBNET}'
     export cluster_base_domain=\$(oc get ingresses.config.openshift.io cluster -o jsonpath='{.spec.domain}' | sed 's/^apps\.//')
     export platform_base_domain=\${cluster_base_domain}
     envsubst < ${GITOPS_DIR}/.bootstrap/argocd.yaml | oc apply -f -
@@ -1210,6 +1211,7 @@ phase4_spoke_gitops_bootstrap() {
       export gitops_repo='${GITOPS_REPO}'
       export gitops_branch='${GITOPS_BRANCH}'
       export cluster_name='${CLUSTER}'
+      export network_subnet='${NETWORK_SUBNET}'
       export cluster_base_domain='${!SPOKE_BASE_DOMAIN_VAR}'
       export platform_base_domain='${!SPOKE_BASE_DOMAIN_VAR}'
       envsubst < ${GITOPS_DIR}/.bootstrap/argocd.yaml | oc apply -f -
