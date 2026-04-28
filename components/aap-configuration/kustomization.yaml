@@ -8,9 +8,11 @@ resources:
   - ./aap-tenant-scc.yaml
   - ./link.yaml
 
+helmGlobals:
+  chartHome: ../../.helm-charts
+
 helmCharts:
   - name: tenant
-    repo: https://operator.min.io
     releaseName: aap
     namespace: aap
     valuesFile: minio-tenant-values.yaml

@@ -10,9 +10,11 @@ resources:
   - ./rbac.yaml
 
 
+helmGlobals:
+  chartHome: ../../.helm-charts
+
 helmCharts:
   - name: tenant
-    repo: https://operator.min.io
     releaseName: acm-observability
     namespace: open-cluster-management-observability
-    valuesFile: minio-tenant-values.yaml  
+    valuesFile: minio-tenant-values.yaml

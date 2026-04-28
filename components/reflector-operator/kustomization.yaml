@@ -6,8 +6,10 @@ resources:
   - ./namespace.yaml
   - ./rbac.yaml
 
+helmGlobals:
+  chartHome: ../../.helm-charts
+
 helmCharts:
   - name: reflector
     namespace: reflector-operator
     releaseName: reflector-operator
-    repo: https://emberstack.github.io/helm-charts
