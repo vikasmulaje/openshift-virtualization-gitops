@@ -48,7 +48,7 @@ set -euo pipefail
 
 # ========================= CONFIGURATION ==================================
 
-HYPERVISOR="cert-rhosp-01.lab.eng.rdu2.redhat.com"
+HYPERVISOR="${HYPERVISOR:-cert-rhosp-01.lab.eng.rdu2.redhat.com}"
 HYPERVISOR_USER="root"
 GITOPS_BRANCH="${GITOPS_BRANCH:-main}"
 # These can be overridden via --network, --ocp-image, or env vars
