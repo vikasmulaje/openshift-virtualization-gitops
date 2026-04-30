@@ -728,8 +728,8 @@ phase2_hub_bootstrap() {
 
   log_info "Cloning GitOps repository on hypervisor (fresh clone)"
   ssh_hyp "
-    cd /home/kni
-    rm -rf openshift-virtualization-gitops
+    cd /home/kni || exit 1
+    [ -d /home/kni/openshift-virtualization-gitops ] && rm -rf /home/kni/openshift-virtualization-gitops
     git clone -b ${GITOPS_BRANCH} ${GITOPS_REPO}
     cd openshift-virtualization-gitops
   "
