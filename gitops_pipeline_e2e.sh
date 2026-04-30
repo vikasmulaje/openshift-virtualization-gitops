@@ -726,15 +726,12 @@ phase1_verify_infra() {
 phase2_hub_bootstrap() {
   log_info "=== PHASE 2: Hub Cluster GitOps Bootstrap ==="
 
-  log_info "Cloning GitOps repository on hypervisor"
+  log_info "Cloning GitOps repository on hypervisor (fresh clone)"
   ssh_hyp "
     cd /home/kni
-    if [ -d openshift-virtualization-gitops ]; then
-      cd openshift-virtualization-gitops && git fetch --all && git checkout ${GITOPS_BRANCH} && git pull
-    else
-      git clone -b ${GITOPS_BRANCH} ${GITOPS_REPO}
-      cd openshift-virtualization-gitops
-    fi
+    rm -rf openshift-virtualization-gitops
+    git clone -b ${GITOPS_BRANCH} ${GITOPS_REPO}
+    cd openshift-virtualization-gitops
   "
 
   log_info "Installing OpenShift GitOps Operator on hub"
@@ -756,7 +753,7 @@ phase2_configure_argocd() {
   ssh_hyp "
     cd /home/kni
     if [ -d openshift-virtualization-gitops ]; then
-      cd openshift-virtualization-gitops && git fetch --all && git checkout ${GITOPS_BRANCH} && git pull
+      cd openshift-virtualization-gitops && git remote set-url origin ${GITOPS_REPO} && git fetch origin && git checkout ${GITOPS_BRANCH} && git pull origin ${GITOPS_BRANCH}
     else
       git clone -b ${GITOPS_BRANCH} ${GITOPS_REPO}
     fi
