@@ -23,3 +23,7 @@ spec:
     namespace: openshift-workload-availability
     source: redhat-operators
     sourceNamespace: openshift-marketplace
+  versions:
+    - fence-agents-remediation.v0.5.0
+    - fence-agents-remediation.v0.6.0
+    - fence-agents-remediation.v0.6.1
