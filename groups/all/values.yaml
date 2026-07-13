@@ -39,13 +39,7 @@ applications:
     source:
       path: components/kube-ops-view       
 
-# Networking
-
-  cert-manager-operator:
-    annotations:
-      argocd.argoproj.io/sync-wave: '20'
-    source:
-      path: components/cert-manager-operator
+# Networking (operator configurations - shared across hub and spokes)
 
   cert-manager-configuration:
     annotations:
@@ -55,12 +49,6 @@ applications:
     source:
       path: components/cert-manager-configuration
 
-  external-dns-operator:
-    annotations:
-      argocd.argoproj.io/sync-wave: '20'
-    source:
-      path: components/external-dns-operator
-
   external-dns-configuration:
     annotations:
       argocd.argoproj.io/sync-wave: '25'
@@ -68,18 +56,6 @@ applications:
       namespace: external-dns
     source:
       path: components/external-dns-configuration      
-
-  metallb-operator:
-    annotations:
-      argocd.argoproj.io/sync-wave: '20'
-    source:
-      path: components/metallb-operator
-
-  nmstate-operator:
-    annotations:
-      argocd.argoproj.io/sync-wave: '20'
-    source:
-      path: components/nmstate-operator 
 
   nmstate-instance:
     annotations:

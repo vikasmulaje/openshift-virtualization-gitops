@@ -22,7 +22,31 @@ applications:
     source:
       path: components/reflector-operator      
 
-# Networking
+# Networking (OLM-based - direct Subscription, no version pinning)
+
+  cert-manager-operator:
+    annotations:
+      argocd.argoproj.io/sync-wave: '20'
+    source:
+      path: components/cert-manager-operator/olm
+
+  external-dns-operator:
+    annotations:
+      argocd.argoproj.io/sync-wave: '20'
+    source:
+      path: components/external-dns-operator/olm
+
+  metallb-operator:
+    annotations:
+      argocd.argoproj.io/sync-wave: '20'
+    source:
+      path: components/metallb-operator/olm
+
+  nmstate-operator:
+    annotations:
+      argocd.argoproj.io/sync-wave: '20'
+    source:
+      path: components/nmstate-operator/olm
 
   metallb-configuration:
     annotations:
@@ -104,7 +128,7 @@ applications:
     annotations:
       argocd.argoproj.io/sync-wave: '20'
     source:
-      path: components/mtv-operator
+      path: components/mtv-operator/olm
 
   mtv-configuration:
     annotations:

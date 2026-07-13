@@ -1,5 +1,31 @@
 applications:     
 
+# Networking (OperatorPolicy-based for spoke clusters)
+
+  cert-manager-operator:
+    annotations:
+      argocd.argoproj.io/sync-wave: '20'
+    source:
+      path: components/cert-manager-operator
+
+  external-dns-operator:
+    annotations:
+      argocd.argoproj.io/sync-wave: '20'
+    source:
+      path: components/external-dns-operator
+
+  metallb-operator:
+    annotations:
+      argocd.argoproj.io/sync-wave: '20'
+    source:
+      path: components/metallb-operator
+
+  nmstate-operator:
+    annotations:
+      argocd.argoproj.io/sync-wave: '20'
+    source:
+      path: components/nmstate-operator
+
 # Basic      
 
 

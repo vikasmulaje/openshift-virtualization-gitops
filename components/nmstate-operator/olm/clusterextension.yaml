@@ -1,0 +1,15 @@
+---
+apiVersion: olm.operatorframework.io/v1
+kind: ClusterExtension
+metadata:
+  name: kubernetes-nmstate-operator
+spec:
+  namespace: openshift-nmstate
+  serviceAccount:
+    name: nmstate-installer
+  source:
+    sourceType: Catalog
+    catalog:
+      packageName: kubernetes-nmstate-operator
+      channels:
+        - stable
