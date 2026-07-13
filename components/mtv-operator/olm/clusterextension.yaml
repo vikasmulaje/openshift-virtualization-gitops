@@ -1,0 +1,15 @@
+---
+apiVersion: olm.operatorframework.io/v1
+kind: ClusterExtension
+metadata:
+  name: mtv-operator
+spec:
+  namespace: openshift-mtv
+  serviceAccount:
+    name: mtv-installer
+  source:
+    sourceType: Catalog
+    catalog:
+      packageName: mtv-operator
+      channels:
+        - release-v2.10

@@ -4,5 +4,6 @@ kind: Kustomization
 
 resources:
   - ../namespace.yaml
-  - ./operatorgroup.yaml
-  - ./subscription.yaml
+  - ./serviceaccount.yaml
+  - ./clusterrolebinding.yaml
+  - ./clusterextension.yaml

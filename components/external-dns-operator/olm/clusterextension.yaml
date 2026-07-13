@@ -1,0 +1,15 @@
+---
+apiVersion: olm.operatorframework.io/v1
+kind: ClusterExtension
+metadata:
+  name: external-dns-operator
+spec:
+  namespace: external-dns-operator
+  serviceAccount:
+    name: external-dns-installer
+  source:
+    sourceType: Catalog
+    catalog:
+      packageName: external-dns-operator
+      channels:
+        - stable-v1
